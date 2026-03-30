@@ -1,0 +1,5 @@
+[console_scripts]
+control = telerobotics_sim.control_publisher:main
+listener = telerobotics_sim.position_listener:main
+mujoco = telerobotics_sim.mujoco_node:main
+
