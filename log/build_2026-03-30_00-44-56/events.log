@@ -1,0 +1,5 @@
+[0.000000] (-) TimerEvent: {}
+[0.000350] (py_srvcli) JobQueued: {'identifier': 'py_srvcli', 'dependencies': OrderedDict()}
+[0.000624] (py_srvcli) JobStarted: {'identifier': 'py_srvcli'}
+[0.007702] (py_srvcli) JobEnded: {'identifier': 'py_srvcli', 'rc': 1}
+[0.017953] (-) EventReactorShutdown: {}

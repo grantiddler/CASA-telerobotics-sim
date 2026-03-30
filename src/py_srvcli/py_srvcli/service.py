@@ -1,9 +1,10 @@
-from example_interfaces.srv import AddTwoInts
-
 import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import String
+from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Vector3
+
 
 import mujoco
 import mujoco.viewer
@@ -13,10 +14,10 @@ class MinimalService(Node):
 
     def __init__(self):
         super().__init__('minimal_service')
-        self.publisher_ = self.create_publisher(builtins.list, 'pose', 10)
+        self.publisher_ = self.create_publisher(Pose, 'pose', 10)
         
         self.subscription = self.create_subscription(
-            String,
+            Vector3,
             'control',
             self.set_control_callback,
             10)
@@ -114,23 +115,29 @@ class MinimalService(Node):
 
     def set_control_callback(self, msg):
         # response.sum = request.a + request.b
+        self.d.ctrl = [msg.x, msg.x, msg.y, msg.y, 0, 0]
         self.get_logger().info(str(self.d.ctrl))
-        self.get_logger().info(str(msg.data))
-        # self.d.ctrl = [request.a, request.a, request.b, request.b, 0, 0]
 
         # return response
 
     
     def timer_callback(self):
-        msg = String()
-        msg.data = str(self.d.body("chassis").xpos)
+        msg = Pose()
+        msg.position.x = self.d.body("chassis").xpos[0]
+        msg.position.y = self.d.body("chassis").xpos[1]
+        msg.position.z = self.d.body("chassis").xpos[2]
+
+        msg.orientation.w = self.d.body("chassis").xquat[0]
+        msg.orientation.x = self.d.body("chassis").xquat[1]
+        msg.orientation.y = self.d.body("chassis").xquat[2]
+        msg.orientation.z = self.d.body("chassis").xquat[3]
+        
         
         mujoco.mj_step(self.m, self.d)
 
         self.viewer.sync()
 
         self.publisher_.publish(msg)
-        # self.get_logger().info(str(self.d.body("chassis").xpos))
         self.i += 1
 
 
