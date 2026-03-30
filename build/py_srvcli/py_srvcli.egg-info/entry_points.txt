@@ -1,4 +1,5 @@
 [console_scripts]
 client = py_srvcli.client:main
+listener = py_srvcli.subscriber:main
 service = py_srvcli.service:main
 

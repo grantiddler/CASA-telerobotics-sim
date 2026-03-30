@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
 'service = py_srvcli.service:main',
 'client = py_srvcli.client:main',
+'listener = py_srvcli.subscriber:main',
         ],
     },
 )

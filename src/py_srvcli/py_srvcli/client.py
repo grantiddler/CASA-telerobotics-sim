@@ -14,9 +14,12 @@ class MinimalClientAsync(Node):
             self.get_logger().info('service not available, waiting again...')
         self.req = AddTwoInts.Request()
 
-    def send_request(self, a, b):
+    def send_request(self, a, b, c, d):
         self.req.a = a
         self.req.b = b
+        self.req.c = c
+        self.req.d = d
+
         return self.cli.call_async(self.req)
 
 
@@ -24,7 +27,7 @@ def main():
     rclpy.init()
 
     minimal_client = MinimalClientAsync()
-    future = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]))
+    future = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]))
     rclpy.spin_until_future_complete(minimal_client, future)
     response = future.result()
     minimal_client.get_logger().info(

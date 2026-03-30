@@ -12,6 +12,7 @@ setup.py
 py_srvcli/__init__.py
 py_srvcli/client.py
 py_srvcli/service.py
+py_srvcli/subscriber.py
 resource/py_srvcli
 test/test_copyright.py
 test/test_flake8.py
