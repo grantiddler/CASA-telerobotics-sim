@@ -13,9 +13,13 @@ class MinimalService(Node):
 
     def __init__(self):
         super().__init__('minimal_service')
-        self.srv = self.create_service(AddTwoInts, 'add_two_ints', self.set_control_callback)
-        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        self.publisher_ = self.create_publisher(builtins.list, 'pose', 10)
         
+        self.subscription = self.create_subscription(
+            String,
+            'control',
+            self.set_control_callback,
+            10)
 
         self.m = mujoco.MjModel.from_xml_string("""<mujoco model="rover">
 <compiler angle="degree"/>
@@ -108,12 +112,13 @@ class MinimalService(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
 
-    def set_control_callback(self, request, response):
-        response.sum = request.a + request.b
+    def set_control_callback(self, msg):
+        # response.sum = request.a + request.b
         self.get_logger().info(str(self.d.ctrl))
-        self.d.ctrl = [request.a, request.a, request.b, request.b, 0, 0]
+        self.get_logger().info(str(msg.data))
+        # self.d.ctrl = [request.a, request.a, request.b, request.b, 0, 0]
 
-        return response
+        # return response
 
     
     def timer_callback(self):

@@ -93,4 +93,4 @@ mujoco.viewer.launch_passive(m, d)
 
 #    viewer.sync()
 
-print(d.body("chassis").xpos)
+print()
