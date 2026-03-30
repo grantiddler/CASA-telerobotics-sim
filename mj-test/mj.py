@@ -87,10 +87,10 @@ m = mujoco.MjModel.from_xml_string("""<mujoco model="rover">
 </contact>
 </mujoco>""")
 d = mujoco.MjData(m)
-mujoco.viewer.launch(m, d)
+mujoco.viewer.launch_passive(m, d)
   # Close the viewer automatically after 30 wall-second
 #  while viewer.is_running() and time.time():
 
 #    viewer.sync()
 
-print(d.ctrl)
+print(d.body("chassis").xpos)

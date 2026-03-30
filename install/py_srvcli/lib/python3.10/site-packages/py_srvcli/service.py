@@ -13,11 +13,9 @@ class MinimalService(Node):
 
     def __init__(self):
         super().__init__('minimal_service')
-        self.srv = self.create_service(AddTwoInts, 'add_two_ints', self.add_two_ints_callback)
+        self.srv = self.create_service(AddTwoInts, 'add_two_ints', self.set_control_callback)
         self.publisher_ = self.create_publisher(String, 'topic', 10)
-        timer_period = 0.5
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.i = 0
+        
 
         self.m = mujoco.MjModel.from_xml_string("""<mujoco model="rover">
 <compiler angle="degree"/>
@@ -104,22 +102,30 @@ class MinimalService(Node):
 </contact>
 </mujoco>""")
         self.d = mujoco.MjData(self.m)
-        mujoco.viewer.launch_passive(self.m, self.d)
-        self.d.ctrl = [1, 1, 1, 1, 0, 0]
+        self.viewer = mujoco.viewer.launch_passive(self.m, self.d)
 
-    def add_two_ints_callback(self, request, response):
+        timer_period = self.m.opt.timestep
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def set_control_callback(self, request, response):
         response.sum = request.a + request.b
-        self.d.ctrl = [request.a, request.b, request.c, request.d]
         self.get_logger().info(str(self.d.ctrl))
+        self.d.ctrl = [request.a, request.a, request.b, request.b, 0, 0]
 
         return response
 
     
     def timer_callback(self):
         msg = String()
-        msg.data = 'Hello World: %d' % self.i
+        msg.data = str(self.d.body("chassis").xpos)
+        
+        mujoco.mj_step(self.m, self.d)
+
+        self.viewer.sync()
+
         self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: "%s"' % msg.data)
+        # self.get_logger().info(str(self.d.body("chassis").xpos))
         self.i += 1
 
 
