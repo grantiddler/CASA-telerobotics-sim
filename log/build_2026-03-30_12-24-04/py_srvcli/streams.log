@@ -1,0 +1,25 @@
+[0.289s] Invoking command in '/home/grant/ros/src/py_srvcli': PYTHONPATH=/home/grant/ros/build/py_srvcli/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/grant/ros/install/py_srvcli/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/py_srvcli build --build-base /home/grant/ros/build/py_srvcli/build install --record /home/grant/ros/build/py_srvcli/install.log --single-version-externally-managed install_data
+[0.402s] running egg_info
+[0.402s] writing ../../build/py_srvcli/py_srvcli.egg-info/PKG-INFO
+[0.402s] writing dependency_links to ../../build/py_srvcli/py_srvcli.egg-info/dependency_links.txt
+[0.402s] writing entry points to ../../build/py_srvcli/py_srvcli.egg-info/entry_points.txt
+[0.402s] writing requirements to ../../build/py_srvcli/py_srvcli.egg-info/requires.txt
+[0.402s] writing top-level names to ../../build/py_srvcli/py_srvcli.egg-info/top_level.txt
+[0.402s] reading manifest file '../../build/py_srvcli/py_srvcli.egg-info/SOURCES.txt'
+[0.402s] adding license file 'LICENSE'
+[0.402s] writing manifest file '../../build/py_srvcli/py_srvcli.egg-info/SOURCES.txt'
+[0.402s] running build
+[0.402s] running build_py
+[0.402s] running install
+[0.402s] running install_lib
+[0.404s] running install_data
+[0.404s] running install_egg_info
+[0.404s] removing '/home/grant/ros/install/py_srvcli/lib/python3.10/site-packages/py_srvcli-0.0.0-py3.10.egg-info' (and everything under it)
+[0.405s] Copying ../../build/py_srvcli/py_srvcli.egg-info to /home/grant/ros/install/py_srvcli/lib/python3.10/site-packages/py_srvcli-0.0.0-py3.10.egg-info
+[0.405s] running install_scripts
+[0.416s] Installing client script to /home/grant/ros/install/py_srvcli/lib/py_srvcli
+[0.416s] Installing control script to /home/grant/ros/install/py_srvcli/lib/py_srvcli
+[0.416s] Installing listener script to /home/grant/ros/install/py_srvcli/lib/py_srvcli
+[0.416s] Installing service script to /home/grant/ros/install/py_srvcli/lib/py_srvcli
+[0.416s] writing list of installed files to '/home/grant/ros/build/py_srvcli/install.log'
+[0.427s] Invoked command in '/home/grant/ros/src/py_srvcli' returned '0': PYTHONPATH=/home/grant/ros/build/py_srvcli/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/grant/ros/install/py_srvcli/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/py_srvcli build --build-base /home/grant/ros/build/py_srvcli/build install --record /home/grant/ros/build/py_srvcli/install.log --single-version-externally-managed install_data

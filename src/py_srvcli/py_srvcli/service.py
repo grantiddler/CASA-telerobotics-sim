@@ -34,16 +34,14 @@ class MinimalService(Node):
 <geom name="surface_terrain_geom" type="box" size="5 5 0.05" pos="0 0 0"/>
 <!--  Chassis  -->
 <body name="chassis" pos="3 3 1">
-<geom type="box" size="0.05 0.05 0.05" pos="0 0 0" rgba="0.7 0.7 0.7 1"/>
 <inertial pos="0 -0.073 -0.1090" mass="8" diaginertia="1 1 1"/>
 <joint name="chassis_free" type="free"/>
-<geom type="box" size="0.05 0.05 0.05" rgba="0 0 1 1" mass="0.05"/>
-<geom type="box" size="0.05 0.05 0.05" rgba="0 0 1 1" mass="0.05"/>
+<geom type="box" size="0.1 0.15 0.1" pos="0 -0.05 0" rgba="0 0 1 1" mass="0.05"/>
 <!--  Left rocker  -->
-<body name="rocker-left" pos="1 0 0">
+<body name="rocker-left" pos="0 0 0">
 <!--  Add hinge for suspension  -->
 <joint name="rocker-left-hinge" type="hinge" range="-45 45" frictionloss="0.135" axis="1 0 0" pos="-0.18 -0.073 -0.109"/>
-<geom type="box" size="0.05 0.05 0.05" rgba="0 0 1 1" mass="0.2"/>
+<geom type="box" size="0.01 0.15 0.01" pos="-.1 -.05 -.125" rgba="0 0 1 1" mass="0.2"/>
 <!--  Front Left Wheel  -->
 <body name="wheel-f-left" pos="-0.21779 0.0694 -0.16307" euler="0 90 0">
 <joint name="wheel-f-left-hinge" damping="1.89" type="hinge" axis="0 0 1"/>
@@ -59,10 +57,10 @@ class MinimalService(Node):
 </body>
 </body>
 <!--  Right rocker  -->
-<body name="rocker-right" pos="-1 0 0">
+<body name="rocker-right" pos="0 0 0">
 <!--  Add hinge for suspension  -->
 <joint name="rocker-right-hinge" type="hinge" range="-45 45" frictionloss="0.0" axis="1 0 0" pos="0.18 -0.073 -0.109"/>
-<geom type="box" size="0.05 0.05 0.05" rgba="0 0 1 1" mass="0.2"/>
+<geom type="box" size="0.01 0.15 0.01" pos=".1 -.05 -.125" rgba="0 0 1 1" mass="0.2"/>
 <!--  Front Right Wheel  -->
 <body name="wheel-f-right" pos="0.21779 0.0694 -0.16307" euler="0 90 0">
 <joint name="wheel-f-right-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
