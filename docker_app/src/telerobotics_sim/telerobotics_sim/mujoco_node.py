@@ -105,7 +105,7 @@ class MinimalService(Node):
 </contact>
 </mujoco>""")
         self.d = mujoco.MjData(self.m)
-        self.viewer = mujoco.viewer.launch_passive(self.m, self.d)
+#        self.viewer = mujoco.viewer.launch_passive(self.m, self.d)
 
         timer_period = self.m.opt.timestep
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -133,8 +133,7 @@ class MinimalService(Node):
         
         mujoco.mj_step(self.m, self.d)
 
-        self.viewer.sync()
-
+#        self.viewer.sync()
         self.publisher_.publish(msg)
         self.i += 1
 

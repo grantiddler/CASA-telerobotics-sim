@@ -16,7 +16,7 @@ class MinimalSubscriber(Node):
         self.subscription  # prevent unused variable warning
 
     def listener_callback(self, msg):
-        self.get_logger().info(str(msg))
+        self.get_logger().info(f"x:{round(msg.position.x, 2)} y:{round(msg.position.y, 2)} z:{round(msg.position.z, 2)}")
 
 
 def main(args=None):
