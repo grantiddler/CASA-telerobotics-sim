@@ -4,6 +4,10 @@ docker_app/build
 docker_app/src/build/*
 docker_app/src/install/*
 docker_app/src/log/*
+launch/
+build/
+install/
+log/
 
 listener.tar
 listener.tar:Zone.Identifier
