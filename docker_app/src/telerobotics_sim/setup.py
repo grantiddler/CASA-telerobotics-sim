@@ -27,6 +27,7 @@ setup(
             'mujoco = telerobotics_sim.mujoco_node:main',
             'listener = telerobotics_sim.position_listener:main',
             'control = telerobotics_sim.control_publisher:main',
+            'rover_velocity_controller = telerobotics_sim.rover_velocity_controller:main',
         ],
     },
 )
