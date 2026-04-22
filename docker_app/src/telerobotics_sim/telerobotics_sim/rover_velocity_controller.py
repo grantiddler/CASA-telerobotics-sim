@@ -73,6 +73,11 @@ MAX_TORQUE   = 4.5     # [N·m]
 # Without FF, a pure-P controller reaches:  ω_ss = Kp·ω_ref/(Kp+B)
 # i.e. with Kp=B the wheel settles at 50% of the setpoint.
 WHEEL_DAMPING = 1.89   # [N·m·s/rad]  — MUST match MJCF joint damping
+MAX_WHEEL_VEL = MAX_TORQUE / WHEEL_DAMPING  # ~2.38 rad/s — no-load max speed
+
+# Slew rate on the *torque* output [N·m/s].
+# At 100 Hz → 1.0 N·m per step → full torque ramp in ~4.5 steps (0.045 s).
+MAX_TORQUE_SLEW = 100.0  # [N·m/s]
 
 # Default proportional gain [N·m / (rad/s)]
 # With FF active, Kp only corrects disturbances — can be lower than damping.
@@ -180,6 +185,9 @@ class RoverVelocityController(Node):
         # P  term:  Kp·e    — corrects transient errors and terrain disturbances.
         #
         # Without FF, pure-P settles at ω_ss = Kp·ω_ref/(Kp+B) < ω_ref.
+        e_left  = omega_left_ref  - omega_left_act
+        e_right = omega_right_ref - omega_right_act
+
         tau_left  = WHEEL_DAMPING * omega_left_ref  + self.kp * e_left
         tau_right = WHEEL_DAMPING * omega_right_ref + self.kp * e_right
 
