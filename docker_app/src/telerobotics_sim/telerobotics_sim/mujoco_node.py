@@ -26,8 +26,9 @@ class MinimalService(Node):
         self.wheel_br_pub = self.create_publisher(Pose, 'wheel_b_right_pose', 10)
 
         # Wheel velocity topics for PlotJuggler (actual vs commanded)
-        self.wheel_actual_vel_pub = self.create_publisher(JointState, 'wheel_joint_states', 10)
-        self.wheel_cmd_vel_pub    = self.create_publisher(JointState, 'wheel_cmd_velocities', 10)
+        self.wheel_actual_vel_pub  = self.create_publisher(JointState, 'wheel_joint_states',  10)
+        # wheel_torque_cmds: the torque [N·m] last written to each motor actuator
+        self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
 
         # Last commanded wheel velocities [fl, bl, fr, br] in rad/s
         self._cmd_wheel_vels = [0.0, 0.0, 0.0, 0.0]
@@ -93,14 +94,12 @@ class MinimalService(Node):
 </body>
 </worldbody>
 <actuator>
-<!--  Left wheel motors (changed to velocity actuators)  -->
-<velocity name="wheel-f-left-vel" joint="wheel-f-left-hinge" kv="2"/>
-<velocity name="wheel-b-left-vel" joint="wheel-b-left-hinge" kv="2"/>
-<!--  Right wheel motors  -->
-<velocity name="wheel-f-right-vel" joint="wheel-f-right-hinge" kv="2"/>
-<velocity name="wheel-b-right-vel" joint="wheel-b-right-hinge" kv="2"/>
-<motor name="rocker-left-test" joint="rocker-left-hinge" gear="1" ctrlrange="-10 10"/>
-<motor name="rocker-right-test" joint="rocker-right-hinge" gear="1" ctrlrange="-10 10"/>
+<!--  Wheel drive motors: force-driven, max 4.5 N·m (matches real motor spec)  -->
+<!--  Joint damping=1.89 N·m·s/rad models viscous friction / back-EMF            -->
+<motor name="wheel-f-left-motor"  joint="wheel-f-left-hinge"  ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
+<motor name="wheel-b-left-motor"  joint="wheel-b-left-hinge"  ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
+<motor name="wheel-f-right-motor" joint="wheel-f-right-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
+<motor name="wheel-b-right-motor" joint="wheel-b-right-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
 </actuator>
 <equality>
 <!--  Differential constraint: rocker-left + rocker-right = 0  -->
@@ -128,11 +127,14 @@ class MinimalService(Node):
         self.i = 0
 
     def set_control_callback(self, msg):
-        left_vel  = msg.x
-        right_vel = msg.y
-        self.d.ctrl = [left_vel, left_vel, right_vel, right_vel, 0, 0]
-        # Store for later publishing on the cmd topic
-        self._cmd_wheel_vels = [left_vel, left_vel, right_vel, right_vel]
+        # msg.x = left torque [N·m], msg.y = right torque [N·m]
+        # Motor actuators: ctrl is directly applied as joint torque.
+        # ctrlrange/forcerange clamps are enforced by MuJoCo.
+        left_torque  = msg.x
+        right_torque = msg.y
+        self.d.ctrl = [left_torque, left_torque, right_torque, right_torque]
+        # Store for diagnostics / PlotJuggler
+        self._cmd_wheel_vels = [left_torque, left_torque, right_torque, right_torque]
 
     
     def timer_callback(self):
@@ -185,12 +187,12 @@ class MinimalService(Node):
         ]
         self.wheel_actual_vel_pub.publish(actual_js)
 
-        # ---- Publish commanded wheel angular velocities ----
+        # ---- Publish commanded motor torques [N·m] ----
         cmd_js = JointState()
         cmd_js.header.stamp = now
         cmd_js.name     = WHEEL_NAMES
-        cmd_js.velocity = [float(v) for v in self._cmd_wheel_vels]
-        self.wheel_cmd_vel_pub.publish(cmd_js)
+        cmd_js.effort   = [float(v) for v in self._cmd_wheel_vels]  # effort = torque
+        self.wheel_torque_cmd_pub.publish(cmd_js)
 
         self.i += 1
 
