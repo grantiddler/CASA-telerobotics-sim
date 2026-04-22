@@ -4,6 +4,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Vector3
+from sensor_msgs.msg import JointState
 
 
 import mujoco
@@ -14,7 +15,22 @@ class MinimalService(Node):
 
     def __init__(self):
         super().__init__('minimal_service')
-        self.publisher_ = self.create_publisher(Pose, 'pose', 10)
+        self.publisher_ = self.create_publisher(
+            Pose, 
+            'pose', 
+            10)
+            
+        self.wheel_fl_pub = self.create_publisher(Pose, 'wheel_f_left_pose', 10)
+        self.wheel_bl_pub = self.create_publisher(Pose, 'wheel_b_left_pose', 10)
+        self.wheel_fr_pub = self.create_publisher(Pose, 'wheel_f_right_pose', 10)
+        self.wheel_br_pub = self.create_publisher(Pose, 'wheel_b_right_pose', 10)
+
+        # Wheel velocity topics for PlotJuggler (actual vs commanded)
+        self.wheel_actual_vel_pub = self.create_publisher(JointState, 'wheel_joint_states', 10)
+        self.wheel_cmd_vel_pub    = self.create_publisher(JointState, 'wheel_cmd_velocities', 10)
+
+        # Last commanded wheel velocities [fl, bl, fr, br] in rad/s
+        self._cmd_wheel_vels = [0.0, 0.0, 0.0, 0.0]
         
         self.subscription = self.create_subscription(
             Vector3,
@@ -31,7 +47,7 @@ class MinimalService(Node):
 <worldbody>
 <!--  Ground plane  -->
 <!--  <geom name="terrain_collision" type="hfield" hfield="pit" pos="20 15 0" rgba="0.5 0.35 0.2 1" contype="1" conaffinity="1" group="0"/>  -->
-<geom name="surface_terrain_geom" type="box" size="5 5 0.05" pos="0 0 0"/>
+<geom name="surface_terrain_geom" type="box" size="50 50 0.05" pos="0 0 0"/>
 <!--  Chassis  -->
 <body name="chassis" pos="3 3 1">
 <inertial pos="0 -0.073 -0.1090" mass="8" diaginertia="1 1 1"/>
@@ -59,7 +75,7 @@ class MinimalService(Node):
 <!--  Right rocker  -->
 <body name="rocker-right" pos="0 0 0">
 <!--  Add hinge for suspension  -->
-<joint name="rocker-right-hinge" type="hinge" range="-35 35" frictionloss="0.0" axis="1 0 0" pos="0.18 -0.073 -0.109"/>
+<joint name="rocker-right-hinge" type="hinge" range="-35 35" frictionloss="0.135" axis="1 0 0" pos="0.18 -0.073 -0.109"/>
 <geom type="box" size="0.01 0.15 0.01" pos=".11 -.05 -.125" rgba="0 0 1 1" mass="0.2"/>
 <!--  Front Right Wheel  -->
 <body name="wheel-f-right" pos="0.21779 0.0694 -0.16307" euler="0 90 0">
@@ -77,12 +93,12 @@ class MinimalService(Node):
 </body>
 </worldbody>
 <actuator>
-<!--  Left wheel motors  -->
-<motor name="wheel-f-left-motor" joint="wheel-f-left-hinge" gear="1" ctrllimited="true" ctrlrange="-4.5 4.5"/>
-<motor name="wheel-b-left-motor" joint="wheel-b-left-hinge" gear="1" ctrllimited="true" ctrlrange="-4.5 4.5"/>
+<!--  Left wheel motors (changed to velocity actuators)  -->
+<velocity name="wheel-f-left-vel" joint="wheel-f-left-hinge" kv="2"/>
+<velocity name="wheel-b-left-vel" joint="wheel-b-left-hinge" kv="2"/>
 <!--  Right wheel motors  -->
-<motor name="wheel-f-right-motor" joint="wheel-f-right-hinge" gear="1" ctrllimited="true" ctrlrange="-4.5 4.5"/>
-<motor name="wheel-b-right-motor" joint="wheel-b-right-hinge" gear="1" ctrllimited="true" ctrlrange="-4.5 4.5"/>
+<velocity name="wheel-f-right-vel" joint="wheel-f-right-hinge" kv="2"/>
+<velocity name="wheel-b-right-vel" joint="wheel-b-right-hinge" kv="2"/>
 <motor name="rocker-left-test" joint="rocker-left-hinge" gear="1" ctrlrange="-10 10"/>
 <motor name="rocker-right-test" joint="rocker-right-hinge" gear="1" ctrlrange="-10 10"/>
 </actuator>
@@ -112,11 +128,11 @@ class MinimalService(Node):
         self.i = 0
 
     def set_control_callback(self, msg):
-        # response.sum = request.a + request.b
-        self.d.ctrl = [msg.x, msg.x, msg.y, msg.y, 0, 0]
-        self.get_logger().info(str(self.d.ctrl))
-
-        # return response
+        left_vel  = msg.x
+        right_vel = msg.y
+        self.d.ctrl = [left_vel, left_vel, right_vel, right_vel, 0, 0]
+        # Store for later publishing on the cmd topic
+        self._cmd_wheel_vels = [left_vel, left_vel, right_vel, right_vel]
 
     
     def timer_callback(self):
@@ -135,6 +151,47 @@ class MinimalService(Node):
 
         self.viewer.sync()
         self.publisher_.publish(msg)
+        
+        # Publish wheel poses
+        wheel_names = ["wheel-f-left", "wheel-b-left", "wheel-f-right", "wheel-b-right"]
+        wheel_pubs = [self.wheel_fl_pub, self.wheel_bl_pub, self.wheel_fr_pub, self.wheel_br_pub]
+        
+        for name, pub in zip(wheel_names, wheel_pubs):
+            w_msg = Pose()
+            w_msg.position.x = self.d.body(name).xpos[0]
+            w_msg.position.y = self.d.body(name).xpos[1]
+            w_msg.position.z = self.d.body(name).xpos[2]
+            w_msg.orientation.w = self.d.body(name).xquat[0]
+            w_msg.orientation.x = self.d.body(name).xquat[1]
+            w_msg.orientation.y = self.d.body(name).xquat[2]
+            w_msg.orientation.z = self.d.body(name).xquat[3]
+            pub.publish(w_msg)
+
+        # ---- Publish actual wheel angular velocities (from MuJoCo qvel) ----
+        WHEEL_JOINTS = [
+            'wheel-f-left-hinge',
+            'wheel-b-left-hinge',
+            'wheel-f-right-hinge',
+            'wheel-b-right-hinge',
+        ]
+        WHEEL_NAMES = ['wheel_f_left', 'wheel_b_left', 'wheel_f_right', 'wheel_b_right']
+        now = self.get_clock().now().to_msg()
+
+        actual_js = JointState()
+        actual_js.header.stamp = now
+        actual_js.name     = WHEEL_NAMES
+        actual_js.velocity = [
+            float(self.d.joint(j).qvel[0]) for j in WHEEL_JOINTS
+        ]
+        self.wheel_actual_vel_pub.publish(actual_js)
+
+        # ---- Publish commanded wheel angular velocities ----
+        cmd_js = JointState()
+        cmd_js.header.stamp = now
+        cmd_js.name     = WHEEL_NAMES
+        cmd_js.velocity = [float(v) for v in self._cmd_wheel_vels]
+        self.wheel_cmd_vel_pub.publish(cmd_js)
+
         self.i += 1
 
 
