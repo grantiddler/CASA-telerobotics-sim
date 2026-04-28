@@ -45,6 +45,13 @@ def generate_launch_description():
             emulate_tty=True,
         ),
 
+        ## tcp connector for unity
+        Node(
+            package="ros_tcp_endpoint",
+            executable="default_server_endpoint",
+            output="screen"
+        ),
+
         # ------------------------------------------------------------------
         # Rover velocity controller (feedforward + P)
         # Subscribes: /cmd_vel, /wheel_joint_states

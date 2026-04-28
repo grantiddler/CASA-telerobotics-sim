@@ -11,6 +11,10 @@ import mujoco
 import mujoco.viewer
 
 
+# 0.001 and rk4 integrator
+# add sensor to joint?? use sensor array instead of qvel
+
+
 class MinimalService(Node):
 
     def __init__(self):
@@ -41,7 +45,7 @@ class MinimalService(Node):
 
         self.m = mujoco.MjModel.from_xml_string("""<mujoco model="rover">
 <compiler angle="degree"/>
-<option timestep="0.01" gravity="0 0 -1.81"/>
+<option timestep="0.005" gravity="0 0 -1.81"/>
 <asset>
 
 </asset>
