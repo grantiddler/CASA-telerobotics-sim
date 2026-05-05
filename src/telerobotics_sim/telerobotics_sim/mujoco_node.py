@@ -43,7 +43,9 @@ class MinimalService(Node):
             self.set_control_callback,
             10)
 
-        self.m = mujoco.MjModel.from_xml_string("""<mujoco model="rover">
+        self.friction = [2.0, 0.050, 0.015]
+
+        self.m = mujoco.MjModel.from_xml_string(f"""<mujoco model="rover">
 <compiler angle="degree"/>
 <option timestep="0.005" gravity="0 0 -1.81"/>
 <asset>
@@ -67,13 +69,13 @@ class MinimalService(Node):
 <body name="wheel-f-left" pos="-0.21779 0.0694 -0.16307" euler="0 90 0">
 <joint name="wheel-f-left-hinge" damping="1.89" type="hinge" axis="0 0 1"/>
 <!--  sliding friction | rotational friction | rolling friction -->
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="{self.friction[0]} {self.friction[1]} {self.friction[2]}"/>
 <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
 </body>
 <!--  Back Left Wheel  -->
 <body name="wheel-b-left" pos="-0.21779 -0.21384 -0.16307" euler="0 90 0">
 <joint name="wheel-b-left-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="{self.friction[0]} {self.friction[1]} {self.friction[2]}"/>
 <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
 </body>
 </body>
@@ -85,13 +87,13 @@ class MinimalService(Node):
 <!--  Front Right Wheel  -->
 <body name="wheel-f-right" pos="0.21779 0.0694 -0.16307" euler="0 90 0">
 <joint name="wheel-f-right-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="{self.friction[0]} {self.friction[1]} {self.friction[2]}"/>
 <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
 </body>
 <!--  Back Right Wheel  -->
 <body name="wheel-b-right" pos="0.21779 -0.21384 -0.16307" euler="0 90 0">
 <joint name="wheel-b-right-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="{self.friction[0]} {self.friction[1]} {self.friction[2]}"/>
 <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
 </body>
 </body>
