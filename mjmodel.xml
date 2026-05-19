@@ -1,0 +1,66 @@
+<mujoco model="rover">
+  <compiler angle="radian"/>
+
+  <option timestep="0.005" gravity="0 0 -1.81"/>
+
+  <worldbody>
+    <geom name="surface_terrain_geom" size="50 50 0.05" type="box"/>
+    <body name="chassis" pos="3 3 1">
+      <inertial pos="0 -0.073 -0.109" mass="8" diaginertia="1 1 1"/>
+      <joint name="chassis_free" type="free"/>
+      <geom size="0.1 0.15 0.1" pos="0 -0.05 0" type="box" mass="0" rgba="0 0 1 1"/>
+      <body name="rocker-left">
+        <joint name="rocker-left-hinge" pos="-0.18 -0.073 -0.109" axis="1 0 0" range="-0.610865 0.610865" frictionloss="0.135"/>
+        <geom size="0.01 0.15 0.01" pos="-0.11 -0.05 -0.125" type="box" mass="0.2" rgba="0 0 1 1"/>
+        <body name="wheel-f-left" pos="-0.21779 0.0694 -0.16307" quat="0.707107 0 0.707107 0">
+          <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
+          <joint name="wheel-f-left-hinge" pos="0 0 0" axis="0 0 1" damping="1.89"/>
+          <geom size="0.05 0.05" type="cylinder" condim="6" friction="2 0.05 0.015" density="100" rgba="0.1 0.1 0.1 1"/>
+        </body>
+        <body name="wheel-b-left" pos="-0.21779 -0.21384 -0.16307" quat="0.707107 0 0.707107 0">
+          <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
+          <joint name="wheel-b-left-hinge" pos="0 0 0" axis="0 0 1" damping="1.89"/>
+          <geom size="0.05 0.05" type="cylinder" condim="6" friction="2 0.05 0.015" density="100" rgba="0.1 0.1 0.1 1"/>
+        </body>
+      </body>
+      <body name="rocker-right">
+        <joint name="rocker-right-hinge" pos="0.18 -0.073 -0.109" axis="1 0 0" range="-0.610865 0.610865" frictionloss="0.135"/>
+        <geom size="0.01 0.15 0.01" pos="0.11 -0.05 -0.125" type="box" mass="0.2" rgba="0 0 1 1"/>
+        <body name="wheel-f-right" pos="0.21779 0.0694 -0.16307" quat="0.707107 0 0.707107 0">
+          <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
+          <joint name="wheel-f-right-hinge" pos="0 0 0" axis="0 0 1" damping="1.89"/>
+          <geom size="0.05 0.05" type="cylinder" condim="6" friction="2 0.05 0.015" density="100" rgba="0.1 0.1 0.1 1"/>
+        </body>
+        <body name="wheel-b-right" pos="0.21779 -0.21384 -0.16307" quat="0.707107 0 0.707107 0">
+          <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
+          <joint name="wheel-b-right-hinge" pos="0 0 0" axis="0 0 1" damping="1.89"/>
+          <geom size="0.05 0.05" type="cylinder" condim="6" friction="2 0.05 0.015" density="100" rgba="0.1 0.1 0.1 1"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <contact>
+    <exclude body1="chassis" body2="rocker-left"/>
+    <exclude body1="chassis" body2="wheel-f-left"/>
+    <exclude body1="chassis" body2="wheel-b-left"/>
+    <exclude body1="chassis" body2="rocker-right"/>
+    <exclude body1="chassis" body2="wheel-f-right"/>
+    <exclude body1="chassis" body2="wheel-b-right"/>
+    <exclude body1="rocker-left" body2="wheel-f-left"/>
+    <exclude body1="rocker-left" body2="wheel-b-left"/>
+    <exclude body1="rocker-right" body2="wheel-f-right"/>
+    <exclude body1="rocker-right" body2="wheel-b-right"/>
+  </contact>
+
+  <equality>
+    <joint joint1="rocker-left-hinge" joint2="rocker-right-hinge" polycoef="0 -1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <general name="wheel-f-left-motor" joint="wheel-f-left-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
+    <general name="wheel-b-left-motor" joint="wheel-b-left-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
+    <general name="wheel-f-right-motor" joint="wheel-f-right-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
+    <general name="wheel-b-right-motor" joint="wheel-b-right-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
+  </actuator>
+</mujoco>

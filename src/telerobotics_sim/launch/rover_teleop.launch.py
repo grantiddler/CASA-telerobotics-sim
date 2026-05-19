@@ -29,44 +29,19 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    return LaunchDescription([
-
-        # ------------------------------------------------------------------
-        # MuJoCo simulation node
-        # Runs the physics engine, renders the viewer, and publishes:
-        #   /pose, /wheel_joint_states, /wheel_torque_cmds,
-        #   /wheel_*_pose topics
-        # ------------------------------------------------------------------
-        Node(
+    LD = []
+    for i in range(1):
+        LD.append(Node(
             package='telerobotics_sim',
             executable='mujoco',
-            name='mujoco_node',
-            output='screen',
-            emulate_tty=True,
-        ),
-
-        ## tcp connector for unity
-        Node(
-            package="ros_tcp_endpoint",
-            executable="default_server_endpoint",
-            output="screen"
-        ),
-
-        # ------------------------------------------------------------------
-        # Rover velocity controller (feedforward + P)
-        # Subscribes: /cmd_vel, /wheel_joint_states
-        # Publishes:  /control (torque), /wheel_vel_setpoints
-        # ------------------------------------------------------------------
-        Node(
-            package='telerobotics_sim',
-            executable='rover_velocity_controller',
-            name='rover_velocity_controller',
+            name=f'mujoco_node_{i}',
             output='screen',
             emulate_tty=True,
             parameters=[{
-                'kp':         1.89,   # [N·m/(rad/s)] — tweak to tune transient response
-                'max_torque': 4.5,    # [N·m]         — must match MJCF ctrlrange/forcerange
-                'max_slew':   100.0,  # [N·m/s]       — reduce to soften torque steps
+                'sim number':         i,
+                'friction':           [2.0, 0.050, 0.015]
             }],
-        ),
-    ])
+        ))
+
+    
+    return LaunchDescription(LD)

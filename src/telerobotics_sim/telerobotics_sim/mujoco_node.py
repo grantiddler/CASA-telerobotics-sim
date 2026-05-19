@@ -23,14 +23,20 @@ class MinimalService(Node):
             Pose, 
             'pose', 
             10)
+
+        self.declare_parameter('friction', [2.0, 0.050, 0.015])
+        self.friction = self.get_parameter('friction').value
+
+        self.declare_parameter('sim_number', 0)
+        self.number = self.get_parameter('sim_number').value
             
-        self.wheel_fl_pub = self.create_publisher(Pose, 'wheel_f_left_pose', 10)
-        self.wheel_bl_pub = self.create_publisher(Pose, 'wheel_b_left_pose', 10)
-        self.wheel_fr_pub = self.create_publisher(Pose, 'wheel_f_right_pose', 10)
-        self.wheel_br_pub = self.create_publisher(Pose, 'wheel_b_right_pose', 10)
+        self.wheel_fl_pub = self.create_publisher(Pose, f'wheel_f_left_pose_{self.number}', 10)
+        self.wheel_bl_pub = self.create_publisher(Pose, f'wheel_b_left_pose_{self.number}', 10)
+        self.wheel_fr_pub = self.create_publisher(Pose, f'wheel_f_right_pose_{self.number}', 10)
+        self.wheel_br_pub = self.create_publisher(Pose, f'wheel_b_right_pose_{self.number}', 10)
 
         # Wheel velocity topics for PlotJuggler (actual vs commanded)
-        self.wheel_actual_vel_pub  = self.create_publisher(JointState, 'wheel_joint_states',  10)
+        self.wheel_actual_vel_pub  = self.create_publisher(JointState, f'wheel_joint_states_{self.number}',  10)
         # wheel_torque_cmds: the torque [N·m] last written to each motor actuator
         self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
 
@@ -43,7 +49,6 @@ class MinimalService(Node):
             self.set_control_callback,
             10)
 
-        self.friction = [2.0, 0.050, 0.015]
 
         self.m = mujoco.MjModel.from_xml_string(f"""<mujoco model="rover">
 <compiler angle="degree"/>
@@ -142,8 +147,6 @@ class MinimalService(Node):
         # Store for diagnostics / PlotJuggler
         self._cmd_wheel_vels = [left_torque, left_torque, right_torque, right_torque]
 
-    
-    def timer_callback(self):
         msg = Pose()
         msg.position.x = self.d.body("chassis").xpos[0]
         msg.position.y = self.d.body("chassis").xpos[1]
@@ -154,6 +157,7 @@ class MinimalService(Node):
         msg.orientation.y = self.d.body("chassis").xquat[2]
         msg.orientation.z = self.d.body("chassis").xquat[3]
         
+        self.get_logger().info(str(self.d.joint("chassis_free").qvel))
         
         mujoco.mj_step(self.m, self.d)
 
@@ -191,6 +195,9 @@ class MinimalService(Node):
         actual_js.velocity = [
             float(self.d.joint(j).qvel[0]) for j in WHEEL_JOINTS
         ]
+        
+
+        
         self.wheel_actual_vel_pub.publish(actual_js)
 
         # ---- Publish commanded motor torques [N·m] ----
@@ -201,6 +208,9 @@ class MinimalService(Node):
         self.wheel_torque_cmd_pub.publish(cmd_js)
 
         self.i += 1
+
+    def timer_callback(self):
+        return
 
 
 def main():

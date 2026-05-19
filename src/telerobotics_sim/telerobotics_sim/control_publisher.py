@@ -10,16 +10,16 @@ class MinimalPublisher(Node):
     def __init__(self):
         super().__init__('minimal_publisher')
         self.publisher_ = self.create_publisher(Vector3, 'control', 10)
-        timer_period = 0.5  # seconds
+        timer_period = 0.01  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
 
     def timer_callback(self):
         msg = Vector3()
-        msg.x = float(input("right motor effort: "))
-        msg.y = float(input("left motor effort: "))
+        msg.x = 4.5
+        msg.y = 2.5
         self.publisher_.publish(msg)
-        self.get_logger().info(str(msg.x)  + " " + str(msg.y))
+        # self.get_logger().info(str(msg.x)  + " " + str(msg.y))
         self.i += 1
 
 
