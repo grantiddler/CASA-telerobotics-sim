@@ -157,7 +157,7 @@ class MinimalService(Node):
         msg.orientation.y = self.d.body("chassis").xquat[2]
         msg.orientation.z = self.d.body("chassis").xquat[3]
         
-        self.get_logger().info(str(self.d.joint("chassis_free").qvel))
+        # self.get_logger().info(str(self.d.joint("wheel-f-left-hinge")))
         
         mujoco.mj_step(self.m, self.d)
 
@@ -185,18 +185,20 @@ class MinimalService(Node):
             'wheel-b-left-hinge',
             'wheel-f-right-hinge',
             'wheel-b-right-hinge',
+            'chassis_free'
         ]
-        WHEEL_NAMES = ['wheel_f_left', 'wheel_b_left', 'wheel_f_right', 'wheel_b_right']
+        WHEEL_NAMES = ['wheel_f_left', 'wheel_b_left', 'wheel_f_right', 'wheel_b_right','X','Y','Z','X_ROT','Y_ROT','Z_ROT']
         now = self.get_clock().now().to_msg()
 
         actual_js = JointState()
         actual_js.header.stamp = now
         actual_js.name     = WHEEL_NAMES
-        actual_js.velocity = [
-            float(self.d.joint(j).qvel[0]) for j in WHEEL_JOINTS
-        ]
-        
 
+        for j in WHEEL_JOINTS:
+            actual_js.velocity.extend(self.d.joint(j).qvel)
+
+        # WHEEL_NAMES.extend(['body joint 1', 'body joint 2', 'body joint 3', 'body joint 4', 'body joint 5', 'body joint 6'])
+        # actual_js.velocity.extend(self.d.joint("chassis_free").qvel)
         
         self.wheel_actual_vel_pub.publish(actual_js)
 
