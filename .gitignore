@@ -12,3 +12,4 @@ listener.tar
 listener.tar:Zone.Identifier
 *.tar
 mj.tar:Zone.Identifier
+.vscode/*

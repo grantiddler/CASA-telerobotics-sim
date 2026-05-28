@@ -124,11 +124,25 @@ class MinimalService(Node):
 </contact>
 </mujoco>""")
         self.d = mujoco.MjData(self.m)
-        self.viewer = mujoco.viewer.launch_passive(self.m, self.d)
+
+        self.declare_parameter('enable_viewer', False)
+
+        self.enable_viewer = self.get_parameter(
+            'enable_viewer'
+        ).get_parameter_value().bool_value
+
+        self.viewer = None
+
+        if self.enable_viewer:
+            self.get_logger().info("Launching MuJoCo viewer")
+            self.viewer = mujoco.viewer.launch_passive(self.m, self.d)
+        else:
+            self.get_logger().info("Running headless (no viewer)")
 
         timer_period = self.m.opt.timestep
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
+        
 
     def set_control_callback(self, msg):
         # msg.x = left torque [N·m], msg.y = right torque [N·m]
@@ -155,7 +169,8 @@ class MinimalService(Node):
         
         mujoco.mj_step(self.m, self.d)
 
-        self.viewer.sync()
+        if self.viewer is not None:
+            self.viewer.sync()
         self.publisher_.publish(msg)
         
         # Publish wheel poses

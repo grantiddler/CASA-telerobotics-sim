@@ -26,10 +26,19 @@ Controller parameters (can be overridden on the command line via --ros-args -p)
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    enable_viewer = LaunchConfiguration('enable_viewer')
+
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'enable_viewer',
+            default_value='false',
+            description='Launch MuJoCo viewer GUI'
+        ),
 
         # ------------------------------------------------------------------
         # MuJoCo simulation node
@@ -43,6 +52,9 @@ def generate_launch_description():
             name='mujoco_node',
             output='screen',
             emulate_tty=True,
+            parameters=[{
+                'enable_viewer': enable_viewer
+            }],
         ),
 
         ## tcp connector for unity
