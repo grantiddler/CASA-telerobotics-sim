@@ -1,19 +1,22 @@
-import rosbag2_py
+from pathlib import Path
 
+from rosbags.highlevel import AnyReader
+from rosbags.typesys import Stores, get_typestore
 
-reader = rosbag2_py.SequentialReader()
-storage_options = rosbag2_py.StorageOptions(
-    uri='bag0',
-    storage_id='sqlite3')
-converter_options = rosbag2_py.ConverterOptions('', '')
-reader.open(storage_options, converter_options)
+bagpath = Path('bags/bag0')
 
-i = 0
-while reader.has_next():
-    i += 1
-    msg = reader.read_next()
-    print(msg)
-    # print(msg[1])
+# Create a type store to use if the bag has no message definitions.
+typestore = get_typestore(Stores.ROS2_HUMBLE)
 
-print(i)
-
+# Create reader instance and open for reading.
+with AnyReader([bagpath], default_typestore=typestore) as reader:
+    connections = reader.connections
+    for connection, timestamp, rawdata in reader.messages(connections=connections):
+         msg = reader.deserialize(rawdata, connection.msgtype)
+         if(connection.msgtype=="sensor_msgs/msg/JointState"):  
+            print(connection.topic)
+            print(msg.name)
+            print(msg.position)
+            print(msg.velocity)
+            
+         print()
