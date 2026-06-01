@@ -7,6 +7,7 @@ docker_app/src/log/*
 build/
 install/
 log/
+bags/
 
 listener.tar
 listener.tar:Zone.Identifier
