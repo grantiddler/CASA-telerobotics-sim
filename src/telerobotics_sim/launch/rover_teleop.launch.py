@@ -26,22 +26,55 @@ Controller parameters (can be overridden on the command line via --ros-args -p)
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import numpy as np
+
+base_friction = [2.0, 0.050, 0.015]
+friction_step_size = 0.02
+friction_steps = 5
+duplicates = 3
+
+def get_friction(var, sweep):
+    friction = base_friction.copy()
+    friction[var] = base_friction[var] * (1 + friction_step_size * (sweep - friction_steps))
+    
+    return friction
 
 
 def generate_launch_description():
     LD = []
-    for i in range(1):
-        LD.append(Node(
-            package='telerobotics_sim',
-            executable='mujoco',
-            name=f'mujoco_node_{i}',
-            output='screen',
-            emulate_tty=True,
-            parameters=[{
-                'sim number':         i,
-                'friction':           [2.0, 0.050, 0.015]
-            }],
-        ))
+    n = 1
+
+    for i in range(3):
+        
+        friction = base_friction.copy()
+        for j in range(2 * friction_steps + 1):
+            
+            friction = get_friction(i, j)
+            
+            for k in range(duplicates):
+                num = 1000 * i + j*10+k
+
+                LD.append(Node(
+                package='telerobotics_sim',
+                executable='mujoco',
+                name=f'mujoco_node_{num}',
+                output='screen',
+                emulate_tty=True,
+                parameters=[{
+                    'sim_ID':         n,
+                    'friction':       friction
+                }],
+                ))
+                n += 1
+                
+    LD.append(Node(
+                package='telerobotics_sim',
+                executable='control',
+                name=f'control_publisher',
+                output='screen',
+                emulate_tty=True,
+
+                ))
 
     
     return LaunchDescription(LD)

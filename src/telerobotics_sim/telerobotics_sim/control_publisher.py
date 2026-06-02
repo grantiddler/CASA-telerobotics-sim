@@ -5,6 +5,15 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Vector3
 
 
+# torques = [[4.5, -4.5],
+#            [4.5, 4.5],
+#            [4.5, 0.0],
+#            [-4.5, 0.0],
+#            [0.0, 4.5],
+#            [0.0, -4.5]]
+torques = [[4.5, 0.0]]
+time = 1500
+
 class MinimalPublisher(Node):
 
     def __init__(self):
@@ -13,14 +22,18 @@ class MinimalPublisher(Node):
         timer_period = 0.01  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
+        self.n = 0
 
     def timer_callback(self):
         msg = Vector3()
-        msg.x = 4.5
-        msg.y = 2.5
+        msg.x = torques[self.n][0]
+        msg.y = torques[self.n][1]
         self.publisher_.publish(msg)
-        # self.get_logger().info(str(msg.x)  + " " + str(msg.y))
         self.i += 1
+        if(self.i >= time):
+            self.i = 0
+            self.n += 1
+            self.get_logger().info(str(msg.x)  + " " + str(msg.y))
 
 
 def main(args=None):
