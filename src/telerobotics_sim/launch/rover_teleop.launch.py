@@ -29,9 +29,9 @@ from launch_ros.actions import Node
 import numpy as np
 
 base_friction = [2.0, 0.050, 0.015]
-friction_step_size = 0.02
-friction_steps = 5
-duplicates = 3
+friction_step_size = 0.05
+friction_steps = 2
+duplicates = 1
 
 def get_friction(var, sweep):
     friction = base_friction.copy()
@@ -42,7 +42,6 @@ def get_friction(var, sweep):
 
 def generate_launch_description():
     LD = []
-    n = 1
 
     for i in range(3):
         
@@ -61,11 +60,10 @@ def generate_launch_description():
                 output='screen',
                 emulate_tty=True,
                 parameters=[{
-                    'sim_ID':         n,
+                    'sim_ID':         num,
                     'friction':       friction
                 }],
                 ))
-                n += 1
                 
     LD.append(Node(
                 package='telerobotics_sim',

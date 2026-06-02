@@ -40,8 +40,10 @@ class MinimalService(Node):
 
         # Wheel velocity topics for PlotJuggler (actual vs commanded)
         self.wheel_actual_vel_pub  = self.create_publisher(JointState, f'wheel_joint_states_' + ('0' * (3 - int(np.log(self.number + .1 ) / np.log(10))) + str(self.number)),  10)
+        self.get_logger().info(('0' * (3 - int(np.log(self.number + .1 ) / np.log(10))) + str(self.number)))
+        
         # wheel_torque_cmds: the torque [N·m] last written to each motor actuator
-        self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
+        # self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
 
         # Last commanded wheel velocities [fl, bl, fr, br] in rad/s
         self._cmd_wheel_vels = [0.0, 0.0, 0.0, 0.0]
@@ -196,12 +198,15 @@ class MinimalService(Node):
         actual_js = JointState()
         actual_js.header.stamp = now
         actual_js.name     = WHEEL_NAMES
+        
+        actual_js.position.extend(self.d.body(name).xpos)
+        actual_js.position.extend(self.d.body(name).xquat)
 
         for j in WHEEL_JOINTS:
             actual_js.velocity.extend(self.d.joint(j).qvel)
 
         # WHEEL_NAMES.extend(['body joint 1', 'body joint 2', 'body joint 3', 'body joint 4', 'body joint 5', 'body joint 6'])
-        # actual_js.velocity.extend(self.d.joint("chassis_free").qvel)
+        actual_js.velocity.extend(self.d.joint("chassis_free").qvel)
         
         self.wheel_actual_vel_pub.publish(actual_js)
 

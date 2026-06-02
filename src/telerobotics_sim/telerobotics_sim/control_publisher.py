@@ -12,7 +12,7 @@ from geometry_msgs.msg import Vector3
 #            [0.0, 4.5],
 #            [0.0, -4.5]]
 torques = [[4.5, 0.0]]
-time = 1500
+time = 15000
 
 class MinimalPublisher(Node):
 
