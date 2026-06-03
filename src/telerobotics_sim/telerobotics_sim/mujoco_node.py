@@ -9,10 +9,12 @@ from sensor_msgs.msg import JointState
 
 import mujoco
 import mujoco.viewer
+import numpy as np
 
 
 # 0.001 and rk4 integrator
 # add sensor to joint?? use sensor array instead of qvel
+
 
 
 class MinimalService(Node):
@@ -27,18 +29,21 @@ class MinimalService(Node):
         self.declare_parameter('friction', [2.0, 0.050, 0.015])
         self.friction = self.get_parameter('friction').value
 
-        self.declare_parameter('sim_number', 0)
-        self.number = self.get_parameter('sim_number').value
+        self.declare_parameter('sim_ID', 0)
+        self.number = self.get_parameter('sim_ID').value
+        
             
-        self.wheel_fl_pub = self.create_publisher(Pose, f'wheel_f_left_pose_{self.number}', 10)
-        self.wheel_bl_pub = self.create_publisher(Pose, f'wheel_b_left_pose_{self.number}', 10)
-        self.wheel_fr_pub = self.create_publisher(Pose, f'wheel_f_right_pose_{self.number}', 10)
-        self.wheel_br_pub = self.create_publisher(Pose, f'wheel_b_right_pose_{self.number}', 10)
+        # self.wheel_fl_pub = self.create_publisher(Pose, f'wheel_f_left_pose_{self.number}', 10)
+        # self.wheel_bl_pub = self.create_publisher(Pose, f'wheel_b_left_pose_{self.number}', 10)
+        # self.wheel_fr_pub = self.create_publisher(Pose, f'wheel_f_right_pose_{self.number}', 10)
+        # self.wheel_br_pub = self.create_publisher(Pose, f'wheel_b_right_pose_{self.number}', 10)
 
         # Wheel velocity topics for PlotJuggler (actual vs commanded)
-        self.wheel_actual_vel_pub  = self.create_publisher(JointState, f'wheel_joint_states_{self.number}',  10)
+        self.wheel_actual_vel_pub  = self.create_publisher(JointState, f'wheel_joint_states_' + ('0' * (3 - int(np.log(self.number + .1 ) / np.log(10))) + str(self.number)),  10)
+        self.get_logger().info(('0' * (3 - int(np.log(self.number + .1 ) / np.log(10))) + str(self.number)))
+        
         # wheel_torque_cmds: the torque [N·m] last written to each motor actuator
-        self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
+        # self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
 
         # Last commanded wheel velocities [fl, bl, fr, br] in rad/s
         self._cmd_wheel_vels = [0.0, 0.0, 0.0, 0.0]
@@ -131,7 +136,7 @@ class MinimalService(Node):
 </contact>
 </mujoco>""")
         self.d = mujoco.MjData(self.m)
-        self.viewer = mujoco.viewer.launch_passive(self.m, self.d)
+        # self.viewer = mujoco.viewer.launch_passive(self.m, self.d)
 
         timer_period = self.m.opt.timestep
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -145,39 +150,39 @@ class MinimalService(Node):
         right_torque = msg.y
         self.d.ctrl = [left_torque, left_torque, right_torque, right_torque]
         # Store for diagnostics / PlotJuggler
-        self._cmd_wheel_vels = [left_torque, left_torque, right_torque, right_torque]
+        # self._cmd_wheel_vels = [left_torque, left_torque, right_torque, right_torque]
 
-        msg = Pose()
-        msg.position.x = self.d.body("chassis").xpos[0]
-        msg.position.y = self.d.body("chassis").xpos[1]
-        msg.position.z = self.d.body("chassis").xpos[2]
+        # msg = Pose()
+        # msg.position.x = self.d.body("chassis").xpos[0]
+        # msg.position.y = self.d.body("chassis").xpos[1]
+        # msg.position.z = self.d.body("chassis").xpos[2]
 
-        msg.orientation.w = self.d.body("chassis").xquat[0]
-        msg.orientation.x = self.d.body("chassis").xquat[1]
-        msg.orientation.y = self.d.body("chassis").xquat[2]
-        msg.orientation.z = self.d.body("chassis").xquat[3]
+        # msg.orientation.w = self.d.body("chassis").xquat[0]
+        # msg.orientation.x = self.d.body("chassis").xquat[1]
+        # msg.orientation.y = self.d.body("chassis").xquat[2]
+        # msg.orientation.z = self.d.body("chassis").xquat[3]
         
-        # self.get_logger().info(str(self.d.joint("wheel-f-left-hinge")))
+        # # self.get_logger().info(str(self.d.joint("wheel-f-left-hinge")))
         
         mujoco.mj_step(self.m, self.d)
 
-        self.viewer.sync()
-        self.publisher_.publish(msg)
+        # # self.viewer.sync()
+        # self.publisher_.publish(msg)
         
         # Publish wheel poses
-        wheel_names = ["wheel-f-left", "wheel-b-left", "wheel-f-right", "wheel-b-right"]
-        wheel_pubs = [self.wheel_fl_pub, self.wheel_bl_pub, self.wheel_fr_pub, self.wheel_br_pub]
+        # wheel_names = ["wheel-f-left", "wheel-b-left", "wheel-f-right", "wheel-b-right"]
+        # wheel_pubs = [self.wheel_fl_pub, self.wheel_bl_pub, self.wheel_fr_pub, self.wheel_br_pub]
         
-        for name, pub in zip(wheel_names, wheel_pubs):
-            w_msg = Pose()
-            w_msg.position.x = self.d.body(name).xpos[0]
-            w_msg.position.y = self.d.body(name).xpos[1]
-            w_msg.position.z = self.d.body(name).xpos[2]
-            w_msg.orientation.w = self.d.body(name).xquat[0]
-            w_msg.orientation.x = self.d.body(name).xquat[1]
-            w_msg.orientation.y = self.d.body(name).xquat[2]
-            w_msg.orientation.z = self.d.body(name).xquat[3]
-            pub.publish(w_msg)
+        # for name, pub in zip(wheel_names, wheel_pubs):
+        #     w_msg = Pose()
+        #     w_msg.position.x = self.d.body(name).xpos[0]
+        #     w_msg.position.y = self.d.body(name).xpos[1]
+        #     w_msg.position.z = self.d.body(name).xpos[2]
+        #     w_msg.orientation.w = self.d.body(name).xquat[0]
+        #     w_msg.orientation.x = self.d.body(name).xquat[1]
+        #     w_msg.orientation.y = self.d.body(name).xquat[2]
+        #     w_msg.orientation.z = self.d.body(name).xquat[3]
+        #     pub.publish(w_msg)
 
         # ---- Publish actual wheel angular velocities (from MuJoCo qvel) ----
         WHEEL_JOINTS = [
@@ -193,21 +198,25 @@ class MinimalService(Node):
         actual_js = JointState()
         actual_js.header.stamp = now
         actual_js.name     = WHEEL_NAMES
+        
+        actual_js.position.extend(self.d.body('chassis').xpos)
+        actual_js.position.extend(self.d.body('chassis').xquat)
+        
 
         for j in WHEEL_JOINTS:
             actual_js.velocity.extend(self.d.joint(j).qvel)
 
         # WHEEL_NAMES.extend(['body joint 1', 'body joint 2', 'body joint 3', 'body joint 4', 'body joint 5', 'body joint 6'])
-        # actual_js.velocity.extend(self.d.joint("chassis_free").qvel)
+        actual_js.velocity.extend(self.d.joint("chassis_free").qvel)
         
         self.wheel_actual_vel_pub.publish(actual_js)
 
         # ---- Publish commanded motor torques [N·m] ----
-        cmd_js = JointState()
-        cmd_js.header.stamp = now
-        cmd_js.name     = WHEEL_NAMES
-        cmd_js.effort   = [float(v) for v in self._cmd_wheel_vels]  # effort = torque
-        self.wheel_torque_cmd_pub.publish(cmd_js)
+        # cmd_js = JointState()
+        # cmd_js.header.stamp = now
+        # cmd_js.name     = WHEEL_NAMES
+        # cmd_js.effort   = [float(v) for v in self._cmd_wheel_vels]  # effort = torque
+        # self.wheel_torque_cmd_pub.publish(cmd_js)
 
         self.i += 1
 
