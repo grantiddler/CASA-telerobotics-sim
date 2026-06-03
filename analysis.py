@@ -3,40 +3,13 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
+from pathlib import Path
+
+from rosbags.highlevel import AnyReader
+from rosbags.typesys import Stores, get_typestore
+
 width = 0.21779 * 2
 radius = .05
-
-fnames = [
-    "1_0.csv",
-    "1_1.csv",
-    "1_2.csv",
-    "1_3.csv",
-    "1_4.csv",
-    "1_5.csv",
-    "1_6.csv",
-    "1_8.csv",
-    "1_10.csv",
-    "2_0.csv",
-    "2_1.csv",
-    "2_2.csv",
-    "2_3.csv",
-    "2_5.csv",
-    "2_6.csv",
-    "2_7.csv",
-    "2_8.csv",
-    "2_9.csv",
-    "2_10.csv",
-    "3_1.csv",
-    "3_3.csv",
-    "3_3.csv",
-    "3_4.csv",
-    "3_5.csv",
-    "3_6.csv",
-    "3_7.csv",
-    "3_8.csv",
-    "3_9.csv",
-    "3_10.csv",
-]
 
 
 

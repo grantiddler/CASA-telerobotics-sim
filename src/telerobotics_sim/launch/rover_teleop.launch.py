@@ -30,7 +30,7 @@ import numpy as np
 
 base_friction = [2.0, 0.050, 0.015]
 friction_step_size = 0.05
-friction_steps = 2
+friction_steps = 10
 duplicates = 1
 
 def get_friction(var, sweep):
@@ -57,22 +57,20 @@ def generate_launch_description():
                 package='telerobotics_sim',
                 executable='mujoco',
                 name=f'mujoco_node_{num}',
-                output='screen',
-                emulate_tty=True,
                 parameters=[{
                     'sim_ID':         num,
                     'friction':       friction
                 }],
                 ))
                 
-    LD.append(Node(
-                package='telerobotics_sim',
-                executable='control',
-                name=f'control_publisher',
-                output='screen',
-                emulate_tty=True,
+    # LD.append(Node(
+    #             package='telerobotics_sim',
+    #             executable='control',
+    #             name=f'control_publisher',
+    #             output='screen',
+    #             emulate_tty=True,
 
-                ))
+    #             ))
 
     
     return LaunchDescription(LD)

@@ -164,7 +164,7 @@ class MinimalService(Node):
         
         # # self.get_logger().info(str(self.d.joint("wheel-f-left-hinge")))
         
-        # mujoco.mj_step(self.m, self.d)
+        mujoco.mj_step(self.m, self.d)
 
         # # self.viewer.sync()
         # self.publisher_.publish(msg)
@@ -199,8 +199,9 @@ class MinimalService(Node):
         actual_js.header.stamp = now
         actual_js.name     = WHEEL_NAMES
         
-        actual_js.position.extend(self.d.body(name).xpos)
-        actual_js.position.extend(self.d.body(name).xquat)
+        actual_js.position.extend(self.d.body('chassis').xpos)
+        actual_js.position.extend(self.d.body('chassis').xquat)
+        
 
         for j in WHEEL_JOINTS:
             actual_js.velocity.extend(self.d.joint(j).qvel)
