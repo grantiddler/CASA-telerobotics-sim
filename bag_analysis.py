@@ -26,9 +26,8 @@ def get_friction(var, sweep):
     
     return friction
 
-def parse_data(path):
+def parse_data(path, velocities = {}):
     bagpath = Path(path)
-    velocities = {}
 
     control = str([0,0])
    # Create reader instance and open for reading.
