@@ -29,19 +29,38 @@ def get_friction(var, sweep):
 def parse_data(path):
     bagpath = Path(path)
     velocities = {}
-    for i in range(3):
-        velocities[i] = {}
-        for j in range(2 * friction_steps + 1):
-            velocities[i][j] ={"pos": [], "vel": []}
-       
+
+    control = str([0,0])
    # Create reader instance and open for reading.
     with AnyReader([bagpath], default_typestore=typestore) as reader:
         connections = reader.connections
         for connection, timestamp, rawdata in reader.messages(connections=connections):
             msg = reader.deserialize(rawdata, connection.msgtype)
+            
+            
+
             if(connection.msgtype=="sensor_msgs/msg/JointState"):
-                velocities[int(connection.topic[-4:-3])][int(connection.topic[-3:-1])]["pos"].append(msg.position)
-                velocities[int(connection.topic[-4:-3])][int(connection.topic[-3:-1])]["vel"].append(msg.velocity)
+                swept_param = int(connection.topic[-4:-3])
+                sweep_itr = int(connection.topic[-3:-1])
+                
+                if(control not in velocities):
+                    velocities[control] = {}
+                if(swept_param not in velocities[control]):
+                    for i in range(swept_param + 1):
+                        if(i not in velocities[control]):
+                            velocities[control][i] = {}
+                    
+                if(sweep_itr not in velocities[control][swept_param]):
+                    # print(f"{sweep_itr} is not in {control} {swept_param} {velocities[control][swept_param].keys()}")
+                    for i in range(sweep_itr + 1):
+                        if(i not in velocities[control][swept_param]):
+                            velocities[control][swept_param][i] = {"pos": [], "vel": []}
+                
+                velocities[control][swept_param][sweep_itr]["pos"].append(msg.position)
+                velocities[control][swept_param][sweep_itr]["vel"].append(msg.velocity)
+            elif(connection.topic == "/control"):
+                control = str([msg.x, msg.y])
+
             
 
         
@@ -49,51 +68,51 @@ def parse_data(path):
 
 def average_slip(velocities):
    
-   slip = {}
-   
-   for i in velocities.keys():
-      slip[i] = {}
-      for j in velocities[i]:
-         
-         
-         
-        slip_trans = []
-        slip_tan = []
-        slip_rot = []
-        
-        
-        for k in range(len(velocities[i][j]["vel"])):
-            vel = velocities[i][j]["vel"][k]
-            pos = velocities[i][j]["pos"][k]
-            
-            r = R.from_quat(vel[-4:])
-            
-            heading = r.as_euler('xyz')[0]
-            
-            v_ideal = radius * (float(vel[0]) + float(vel[1]) + float(vel[2]) + float(vel[3])) / 4
-            v_tan = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
-            v_trans =  np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5])
-            
-            
-            omega_ideal = radius * (float(vel[0]) + float(vel[1]) - float(vel[2]) - float(vel[3])) / (2 * width)
-            omega_real = float(vel[-2])
+    slip = {}
+    for h in velocities:
+        slip[h] = {}
+        for i in velocities[h]:
+            slip[h][i] = {}
+            for j in velocities[h][i]:
+                
 
-            rotational_slip = omega_real - omega_ideal
-            tangential_slip = v_tan - v_ideal
-            transverse_slip = v_trans
+                slip_trans = []
+                slip_tan = []
+                slip_rot = []
+                
+                
+                for k in range(len(velocities[h][i][j]["vel"])):
+                    vel = velocities[h][i][j]["vel"][k]
+                    pos = velocities[h][i][j]["pos"][k]
+                    
+                    r = R.from_quat(vel[-4:])
+                    
+                    heading = r.as_euler('xyz')[0]
+                    
+                    v_ideal = radius * (float(vel[0]) + float(vel[1]) + float(vel[2]) + float(vel[3])) / 4
+                    v_tan = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
+                    v_trans =  np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5])
+                    
+                    
+                    omega_ideal = radius * (float(vel[0]) + float(vel[1]) - float(vel[2]) - float(vel[3])) / (2 * width)
+                    omega_real = float(vel[-2])
 
-            slip_trans.append(transverse_slip)
-            slip_tan.append(tangential_slip)
-            slip_rot.append(rotational_slip)
-            
+                    rotational_slip = omega_real - omega_ideal
+                    tangential_slip = v_tan - v_ideal
+                    transverse_slip = v_trans
 
-        slip[i][j] = {"friction": get_friction(i,j),"transverse": np.mean(slip_trans), "tangential": np.mean(slip_tan), "rotational": np.mean(slip_rot)}
+                    slip_trans.append(transverse_slip)
+                    slip_tan.append(tangential_slip)
+                    slip_rot.append(rotational_slip)
+                    
 
-   return slip
+                slip[h][i][j] = {"friction": get_friction(i,j),"transverse": np.mean(slip_trans), "tangential": np.mean(slip_tan), "rotational": np.mean(slip_rot)}
+
+    return slip
 
 
 def plot_slip(slip, slip_type, subplot):
-    for i in range(3):
+    for i in range(slip):
         data = []
         friction_variation = []
         for j in slip[i]:
@@ -104,42 +123,11 @@ def plot_slip(slip, slip_type, subplot):
    
     return
  
-slip = average_slip(parse_data("bags/one_side"))
-
-
-slip_types = ["rotational", "transverse", "tangential"]
-units = ["rad/s", "m/s", "m/s"]
-for i in range(3):
-    sub = plt.subplot(3, 3, 1 + i)
-    # sub.set_ylim(0,0.5)
-    sub.set_title(f"{slip_types[i]} slip")
-    sub.set_xlabel("percent variation of parameter")
-    sub.set_ylabel(f"average magnitude of slip ({units[i]})")
-    plot_slip(slip, slip_types[i], sub)
-
-
 slip = average_slip(parse_data("bags/point_turn"))
 
-slip_types = ["rotational", "transverse", "tangential"]
-units = ["rad/s", "m/s", "m/s"]
-for i in range(3):
-    sub = plt.subplot(3, 3, 4 + i)
-    # sub.set_ylim(0,0.5)
-    sub.set_title(f"{slip_types[i]} slip")
-    sub.set_xlabel("percent variation of parameter")
-    sub.set_ylabel(f"average magnitude of slip ({units[i]})")
-    plot_slip(slip, slip_types[i], sub)
-    
-slip = average_slip(parse_data("bags/run_forward"))
-
-slip_types = ["rotational", "transverse", "tangential"]
-units = ["rad/s", "m/s", "m/s"]
-for i in range(3):
-    sub = plt.subplot(3, 3, 7 + i)
-    # sub.set_ylim(0,0.5)
-    sub.set_title(f"{slip_types[i]} slip")
-    sub.set_xlabel("percent variation of parameter")
-    sub.set_ylabel(f"average magnitude of slip ({units[i]})")
-    plot_slip(slip, slip_types[i], sub)
-    
-plt.show()
+for i in slip:
+    print(i)
+    for j in slip[i]:
+        print(f"   {j}")
+        for k in slip[i][j]:
+            print(f"      {k}")
