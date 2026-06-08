@@ -122,11 +122,45 @@ def plot_slip(slip, slip_type, subplot):
    
     return
  
-slip = average_slip(parse_data("bags/point_turn"))
+slip = average_slip(parse_data("data/bag2"))
 
+
+n = 0
+size = len(slip.keys())
+print(size)
 for i in slip:
     print(i)
     for j in slip[i]:
         print(f"   {j}")
+        friction = []
+        transverse = []
+        tangential = []
+        rotational = []
         for k in slip[i][j]:
-            print(f"      {k}")
+            transverse.append(slip[i][j][k]["transverse"])
+            tangential.append(slip[i][j][k]["tangential"])
+            rotational.append(slip[i][j][k]["rotational"])
+            friction.append(slip[i][j][k]["friction"][j])
+            
+            
+            print(slip[i][j][k]["friction"][j])
+            
+        
+            
+        sub = plt.subplot(3, size, 1 + n)
+        sub.set_title(i)
+        plt.plot(friction, transverse)
+        sub.sharey(plt.subplot(3, size, 1))
+        
+        sub = plt.subplot(3, size, 1 + size + n)
+        plt.plot(friction, tangential)
+        sub.sharey(plt.subplot(3, size, 1 + size))
+        
+        
+        sub = plt.subplot(3, size, 1 + 2 * size + n)
+        plt.plot(friction, rotational)
+        sub.sharey(plt.subplot(3, size, 1 + 2 * size))
+        
+        
+        n += 1
+plt.show()
