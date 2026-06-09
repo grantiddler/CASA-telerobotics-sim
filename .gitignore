@@ -8,6 +8,7 @@ build/
 install/
 log/
 bags/
+data/
 
 listener.tar
 listener.tar:Zone.Identifier
