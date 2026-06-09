@@ -172,7 +172,8 @@ def plot_velocity(slip, param_swept = None):
         sub = plt.subplot(3, size, 1 + size + n)
         plt.plot(friction, (np.transpose(tangential)))
         plt.plot(friction, (np.transpose(ideal_vel)))
-        sub.sharey(plt.subplot(3, size, 1 + size))
+        sub.sharey(plt.subplot(3, size, 1))
+        # sub.sharey(plt.subplot(3, size, 1 + size))
         
         
         
@@ -245,7 +246,8 @@ def plot_slip(slip, param_swept = None):
         
         sub = plt.subplot(3, size, 1 + size + n)
         plt.plot(friction, (np.transpose(tangential) - np.transpose(ideal_vel)))
-        sub.sharey(plt.subplot(3, size, 1 + size))
+        sub.sharey(plt.subplot(3, size, 1))
+        # sub.sharey(plt.subplot(3, size, 1 + size))
         
         
         
