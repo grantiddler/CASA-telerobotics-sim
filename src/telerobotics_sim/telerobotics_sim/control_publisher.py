@@ -5,14 +5,17 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Vector3
 
 
-# torques = [[4.5, -4.5],
-#            [4.5, 4.5],
-#            [4.5, 0.0],
-#            [-4.5, 0.0],
-#            [0.0, 4.5],
-#            [0.0, -4.5]]
-torques = [[4.5, 0.0]]
-time = 15000
+torques = [[0.0, 0.0],
+           [4.5, 4.5],
+           [4.5, 3.375],
+           [4.5, 2.25],
+           [4.5, 1.125],
+           [4.5, 0.0],
+           [4.5, -1.125],
+           [4.5, -2.25],
+           [4.5, -3.375],
+           [4.5, -4.5]]
+times = [1500, 30000,30000,30000,30000,30000,30000,30000,30000,30000]
 
 class MinimalPublisher(Node):
 
@@ -30,7 +33,7 @@ class MinimalPublisher(Node):
         msg.y = torques[self.n][1]
         self.publisher_.publish(msg)
         self.i += 1
-        if(self.i >= time):
+        if(self.i >= times[self.n]):
             self.i = 0
             self.n += 1
             self.get_logger().info(str(msg.x)  + " " + str(msg.y))
