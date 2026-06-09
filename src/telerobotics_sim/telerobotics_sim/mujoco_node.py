@@ -207,7 +207,6 @@ class MinimalService(Node):
             actual_js.velocity.extend(self.d.joint(j).qvel)
 
         # WHEEL_NAMES.extend(['body joint 1', 'body joint 2', 'body joint 3', 'body joint 4', 'body joint 5', 'body joint 6'])
-        actual_js.velocity.extend(self.d.joint("chassis_free").qvel)
         
         self.wheel_actual_vel_pub.publish(actual_js)
 
