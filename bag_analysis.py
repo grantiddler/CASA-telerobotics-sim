@@ -122,7 +122,7 @@ def plot_slip(slip, slip_type, subplot):
    
     return
  
-slip = average_slip(parse_data("data/bag2"))
+slip = average_slip(parse_data("data/bag5"))
 
 
 n = 0
@@ -130,6 +130,8 @@ size = len(slip.keys())
 print(size)
 for i in slip:
     print(i)
+    if(i == "[0, 0]" or i == "[0.0, 0.0]" ):
+        continue
     for j in slip[i]:
         print(f"   {j}")
         friction = []
