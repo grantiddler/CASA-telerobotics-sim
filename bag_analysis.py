@@ -194,9 +194,87 @@ def plot_velocity(slip, param_swept = None):
         sub.set_ylabel("angular velocity (rad/s)")
     plt.show()
     
+def plot_slip(slip, param_swept = None):
+    n = 0
+    size = len(slip.keys())
+    for i in slip:
+        # print(i)
+        if(i == "[0, 0]" or i == "[0.0, 0.0]" ):
+            size -= 1
+            continue
+        
+        transverse = []
+        tangential = []
+        rotational = []
+        ideal_vel = []
+        ideal_rot = []
+        
+        for j in slip[i]:
+            if(param_swept != None and (param_swept != j)):
+                continue
+            friction = []
+            transverse_temp = []
+            tangential_temp = []
+            rotational_temp = []
+            ideal_vel_temp = []
+            ideal_rot_temp = []
+                    
+            
+            for k in slip[i][j]:
+                transverse_temp.append(slip[i][j][k]["transverse"])
+                tangential_temp.append(slip[i][j][k]["tangential"])
+                rotational_temp.append(slip[i][j][k]["rotational"])
+                ideal_rot_temp.append(slip[i][j][k]["rotational ideal"])
+                ideal_vel_temp.append(slip[i][j][k]["tangential ideal"])
+                friction.append(slip[i][j][k]["friction"][j])
+                
+                
+                # print(slip[i][j][k]["friction"][j])
+
+            transverse.append(transverse_temp)
+            tangential.append(tangential_temp)
+            rotational.append(rotational_temp)
+            ideal_vel.append(ideal_vel_temp)
+            ideal_rot.append(ideal_rot_temp)
+            
+                
+        sub = plt.subplot(3, size, 1 + n)
+        sub.set_title(i)
+        plt.plot(friction, (np.transpose(transverse)))
+        sub.sharey(plt.subplot(3, size, 1))
+        
+        sub = plt.subplot(3, size, 1 + size + n)
+        plt.plot(friction, (np.transpose(tangential) - np.transpose(ideal_vel)))
+        sub.sharey(plt.subplot(3, size, 1 + size))
+        
+        
+        
+        sub = plt.subplot(3, size, 1 + 2 * size + n)
+        plt.plot(friction, np.abs(np.transpose(rotational) - np.transpose(ideal_rot)))
+        sub.sharey(plt.subplot(3, size, 1 + 2 * size))
+        
+        
+        
+        n += 1
+        sub = plt.subplot(3, size, 1)
+        sub.set_ylabel("transverse slip (m/s)")
+        
+        sub = plt.subplot(3, size, 1 + size)
+        sub.set_ylabel("tangential slip (m/s)")
+        
+        sub = plt.subplot(3, size, 1 + 2 * size)
+        sub.set_ylabel("angular slip (rad/s)")
+    plt.show()
+    
     
     
 
 
-slip = average_slip(parse_data("data/bag6"))
+slip = average_slip(parse_data("data/bag7"))
 plot_velocity(slip, 0)
+plot_velocity(slip, 1)
+plot_velocity(slip, 2)
+
+plot_slip(slip, 0)
+plot_slip(slip, 1)
+plot_slip(slip, 2)
