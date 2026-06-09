@@ -57,6 +57,7 @@ def parse_data(path, velocities = {}):
                 
                 velocities[control][swept_param][sweep_itr]["pos"].append(msg.position)
                 velocities[control][swept_param][sweep_itr]["vel"].append(msg.velocity)
+                # print(msg.velocity)
             elif(connection.topic == "/control"):
                 control = str([msg.x, msg.y])
 
@@ -79,90 +80,123 @@ def average_slip(velocities):
                 slip_tan = []
                 slip_rot = []
                 
-                
+                ideal_vel = []
+                ideal_rot = []
+
                 for k in range(len(velocities[h][i][j]["vel"])):
                     vel = velocities[h][i][j]["vel"][k]
                     pos = velocities[h][i][j]["pos"][k]
                     
-                    r = R.from_quat(vel[-4:])
+                    r = R.from_quat(pos[-4:])
+                    # print(r.as_euler('xyz'))
+                    # print(vel)
                     
                     heading = r.as_euler('xyz')[0]
                     
                     v_ideal = radius * (float(vel[0]) + float(vel[1]) + float(vel[2]) + float(vel[3])) / 4
-                    v_tan = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
-                    v_trans =  np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5])
+                    v_trans = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
+                    v_tan =  (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5]))
                     
                     
                     omega_ideal = radius * (float(vel[0]) + float(vel[1]) - float(vel[2]) - float(vel[3])) / (2 * width)
-                    omega_real = float(vel[-2])
+                    omega_real = float(vel[-1])
+                    
+                    # print(f"{h} {v_ideal} {omega_ideal}")
 
-                    rotational_slip = omega_real - omega_ideal
-                    tangential_slip = v_tan - v_ideal
+                    rotational_slip = omega_real #- omega_ideal
+                    tangential_slip = v_tan # - v_ideal
                     transverse_slip = v_trans
 
                     slip_trans.append(transverse_slip)
                     slip_tan.append(tangential_slip)
                     slip_rot.append(rotational_slip)
                     
+                    ideal_vel.append(v_ideal)
+                    ideal_rot.append(omega_ideal)
+                    
 
-                slip[h][i][j] = {"friction": get_friction(i,j),"transverse": np.mean(slip_trans), "tangential": np.mean(slip_tan), "rotational": np.mean(slip_rot)}
+                slip[h][i][j] = {"friction": get_friction(i,j),"transverse": np.mean(slip_trans), "tangential": np.mean(slip_tan), "rotational": np.mean(slip_rot), "tangential ideal": np.mean(ideal_vel), "rotational ideal": np.mean(ideal_rot)}
 
     return slip
 
 
-def plot_slip(slip, slip_type, subplot):
-    for i in range(slip):
-        data = []
-        friction_variation = []
-        for j in slip[i]:
-            data.append(slip[i][j][slip_type])
-            friction_variation.append((j - friction_steps) * friction_step_size * 100)
-        subplot.plot(friction_variation, np.abs(data))
+def plot_velocity(slip, param_swept = None):
+    n = 0
+    size = len(slip.keys())
+    for i in slip:
+        # print(i)
+        if(i == "[0, 0]" or i == "[0.0, 0.0]" ):
+            size -= 1
+            continue
         
-   
-    return
- 
-slip = average_slip(parse_data("data/bag5"))
-
-
-n = 0
-size = len(slip.keys())
-print(size)
-for i in slip:
-    print(i)
-    if(i == "[0, 0]" or i == "[0.0, 0.0]" ):
-        continue
-    for j in slip[i]:
-        print(f"   {j}")
-        friction = []
         transverse = []
         tangential = []
         rotational = []
-        for k in slip[i][j]:
-            transverse.append(slip[i][j][k]["transverse"])
-            tangential.append(slip[i][j][k]["tangential"])
-            rotational.append(slip[i][j][k]["rotational"])
-            friction.append(slip[i][j][k]["friction"][j])
-            
-            
-            print(slip[i][j][k]["friction"][j])
-            
+        ideal_vel = []
+        ideal_rot = []
         
+        for j in slip[i]:
+            if(param_swept != None and (param_swept != j)):
+                continue
+            friction = []
+            transverse_temp = []
+            tangential_temp = []
+            rotational_temp = []
+            ideal_vel_temp = []
+            ideal_rot_temp = []
+                    
             
+            for k in slip[i][j]:
+                transverse_temp.append(slip[i][j][k]["transverse"])
+                tangential_temp.append(slip[i][j][k]["tangential"])
+                rotational_temp.append(slip[i][j][k]["rotational"])
+                ideal_rot_temp.append(slip[i][j][k]["rotational ideal"])
+                ideal_vel_temp.append(slip[i][j][k]["tangential ideal"])
+                friction.append(slip[i][j][k]["friction"][j])
+                
+                
+                # print(slip[i][j][k]["friction"][j])
+
+            transverse.append(transverse_temp)
+            tangential.append(tangential_temp)
+            rotational.append(rotational_temp)
+            ideal_vel.append(ideal_vel_temp)
+            ideal_rot.append(ideal_rot_temp)
+            
+                
         sub = plt.subplot(3, size, 1 + n)
         sub.set_title(i)
-        plt.plot(friction, transverse)
+        plt.plot(friction, (np.transpose(transverse)))
         sub.sharey(plt.subplot(3, size, 1))
         
         sub = plt.subplot(3, size, 1 + size + n)
-        plt.plot(friction, tangential)
+        plt.plot(friction, (np.transpose(tangential)))
+        plt.plot(friction, (np.transpose(ideal_vel)))
         sub.sharey(plt.subplot(3, size, 1 + size))
         
         
+        
         sub = plt.subplot(3, size, 1 + 2 * size + n)
-        plt.plot(friction, rotational)
+        plt.plot(friction, np.abs(np.transpose(rotational)))
+        plt.plot(friction, np.abs(np.transpose(ideal_rot)))
         sub.sharey(plt.subplot(3, size, 1 + 2 * size))
         
         
+        
         n += 1
-plt.show()
+        sub = plt.subplot(3, size, 1)
+        sub.set_ylabel("transverse velocity (m/s)")
+        
+        sub = plt.subplot(3, size, 1 + size)
+        sub.set_ylabel("tangential velocity (m/s)")
+        
+        sub = plt.subplot(3, size, 1 + 2 * size)
+        sub.set_ylabel("angular velocity (rad/s)")
+    plt.show()
+    
+    
+    
+
+
+slip = average_slip(parse_data("data/bag6"))
+plot_velocity(slip, 0)
