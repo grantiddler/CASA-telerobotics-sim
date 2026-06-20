@@ -32,6 +32,10 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     enable_viewer = LaunchConfiguration('enable_viewer')
+    start_x = LaunchConfiguration('start_x')
+    start_y = LaunchConfiguration('start_y')
+    start_z = LaunchConfiguration('start_z')
+    start_yaw = LaunchConfiguration('start_yaw')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -39,6 +43,10 @@ def generate_launch_description():
             default_value='false',
             description='Launch MuJoCo viewer GUI'
         ),
+        DeclareLaunchArgument('start_x', default_value='3.0'),
+        DeclareLaunchArgument('start_y', default_value='3.0'),
+        DeclareLaunchArgument('start_z', default_value='1.0'),
+        DeclareLaunchArgument('start_yaw', default_value='0.0'),
 
         # ------------------------------------------------------------------
         # MuJoCo simulation node
@@ -53,7 +61,11 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
             parameters=[{
-                'enable_viewer': enable_viewer
+                'enable_viewer': enable_viewer,
+                'start_x': start_x,
+                'start_y': start_y,
+                'start_z': start_z,
+                'start_yaw': start_yaw,
             }],
         ),
 

@@ -11,6 +11,7 @@ import mujoco.viewer
 
 from ament_index_python.packages import get_package_share_directory
 import os
+import math
 
 
 # 0.001 and rk4 integrator
@@ -47,9 +48,25 @@ class MinimalService(Node):
         
         pkg_share = get_package_share_directory('telerobotics_sim')
         model_path = os.path.join(pkg_share, 'models', 'scene.xml')
-        self.m = mujoco.MjModel.from_xml_path(model_path)
 
+        self.declare_parameter('start_x', 3.0)
+        self.declare_parameter('start_y', 3.0)
+        self.declare_parameter('start_z', 1.0)
+        self.declare_parameter('start_yaw', 0.0)  # degrees
+
+        self.m = mujoco.MjModel.from_xml_path(model_path)
         self.d = mujoco.MjData(self.m)
+
+        # Apply initial pose to the chassis free joint
+        x = self.get_parameter('start_x').value
+        y = self.get_parameter('start_y').value
+        z = self.get_parameter('start_z').value
+        yaw = math.radians(self.get_parameter('start_yaw').value)
+
+        adr = self.m.joint('chassis_free').qposadr[0]  # don't hardcode index 0
+        self.d.qpos[adr:adr+3] = [x, y, z]
+        self.d.qpos[adr+3:adr+7] = [math.cos(yaw/2), 0, 0, math.sin(yaw/2)]
+        mujoco.mj_forward(self.m, self.d)  # propagate before first mj_step
 
         self.declare_parameter('enable_viewer', False)
 
