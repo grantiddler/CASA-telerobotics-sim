@@ -6,9 +6,11 @@ from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Vector3
 from sensor_msgs.msg import JointState
 
-
 import mujoco
 import mujoco.viewer
+
+from ament_index_python.packages import get_package_share_directory
+import os
 
 
 # 0.001 and rk4 integrator
@@ -42,87 +44,11 @@ class MinimalService(Node):
             'control',
             self.set_control_callback,
             10)
+        
+        pkg_share = get_package_share_directory('telerobotics_sim')
+        model_path = os.path.join(pkg_share, 'models', 'scene.xml')
+        self.m = mujoco.MjModel.from_xml_path(model_path)
 
-        self.m = mujoco.MjModel.from_xml_string("""<mujoco model="rover">
-<compiler angle="degree"/>
-<option timestep="0.005" gravity="0 0 -1.81"/>
-<asset>
-
-</asset>
-<worldbody>
-<!--  Ground plane  -->
-<!--  <geom name="terrain_collision" type="hfield" hfield="pit" pos="20 15 0" rgba="0.5 0.35 0.2 1" contype="1" conaffinity="1" group="0"/>  -->
-<geom name="surface_terrain_geom" type="box" size="50 50 0.05" pos="0 0 0"/>
-<!--  Chassis  -->
-<body name="chassis" pos="3 3 1">
-<inertial pos="0 -0.073 -0.1090" mass="8" diaginertia="1 1 1"/>
-<joint name="chassis_free" type="free"/>
-<geom type="box" size="0.1 0.15 0.1" pos="0 -0.05 0" rgba="0 0 1 1" mass="0.05"/>
-<!--  Left rocker  -->
-<body name="rocker-left" pos="0 0 0">
-<!--  Add hinge for suspension  -->
-<joint name="rocker-left-hinge" type="hinge" range="-35 35" frictionloss="0.135" axis="1 0 0" pos="-0.18 -0.073 -0.109"/>
-<geom type="box" size="0.01 0.15 0.01" pos="-.11 -.05 -.125" rgba="0 0 1 1" mass="0.2"/>
-<!--  Front Left Wheel  -->
-<body name="wheel-f-left" pos="-0.21779 0.0694 -0.16307" euler="0 90 0">
-<joint name="wheel-f-left-hinge" damping="1.89" type="hinge" axis="0 0 1"/>
-<!--  sliding friction | rotational friction | rolling friction -->
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
-<inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
-</body>
-<!--  Back Left Wheel  -->
-<body name="wheel-b-left" pos="-0.21779 -0.21384 -0.16307" euler="0 90 0">
-<joint name="wheel-b-left-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
-<inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
-</body>
-</body>
-<!--  Right rocker  -->
-<body name="rocker-right" pos="0 0 0">
-<!--  Add hinge for suspension  -->
-<joint name="rocker-right-hinge" type="hinge" range="-35 35" frictionloss="0.135" axis="1 0 0" pos="0.18 -0.073 -0.109"/>
-<geom type="box" size="0.01 0.15 0.01" pos=".11 -.05 -.125" rgba="0 0 1 1" mass="0.2"/>
-<!--  Front Right Wheel  -->
-<body name="wheel-f-right" pos="0.21779 0.0694 -0.16307" euler="0 90 0">
-<joint name="wheel-f-right-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
-<inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
-</body>
-<!--  Back Right Wheel  -->
-<body name="wheel-b-right" pos="0.21779 -0.21384 -0.16307" euler="0 90 0">
-<joint name="wheel-b-right-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-<geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
-<inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
-</body>
-</body>
-</body>
-</worldbody>
-<actuator>
-<!--  Wheel drive motors: force-driven, max 4.5 N·m (matches real motor spec)  -->
-<!--  Joint damping=1.89 N·m·s/rad models viscous friction / back-EMF            -->
-<motor name="wheel-f-left-motor"  joint="wheel-f-left-hinge"  ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
-<motor name="wheel-b-left-motor"  joint="wheel-b-left-hinge"  ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
-<motor name="wheel-f-right-motor" joint="wheel-f-right-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
-<motor name="wheel-b-right-motor" joint="wheel-b-right-hinge" ctrlrange="-4.5 4.5" forcerange="-4.5 4.5"/>
-</actuator>
-<equality>
-<!--  Differential constraint: rocker-left + rocker-right = 0  -->
-<joint joint1="rocker-left-hinge" joint2="rocker-right-hinge" polycoef="0 -1 0 0 0"/>
-</equality>
-<contact>
-<!--  Disable self-collisions  -->
-<exclude body1="wheel-f-right" body2="rocker-right"/>
-<exclude body1="wheel-b-right" body2="rocker-right"/>
-<exclude body1="wheel-f-left" body2="rocker-left"/>
-<exclude body1="wheel-b-left" body2="rocker-left"/>
-<exclude body1="wheel-f-right" body2="chassis"/>
-<exclude body1="wheel-b-right" body2="chassis"/>
-<exclude body1="wheel-f-left" body2="chassis"/>
-<exclude body1="wheel-b-left" body2="chassis"/>
-<exclude body1="rocker-right" body2="chassis"/>
-<exclude body1="rocker-left" body2="chassis"/>
-</contact>
-</mujoco>""")
         self.d = mujoco.MjData(self.m)
 
         self.declare_parameter('enable_viewer', False)
