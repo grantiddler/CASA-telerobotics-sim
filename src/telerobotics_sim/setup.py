@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'telerobotics_sim'
 
@@ -12,6 +14,9 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch',
             ['launch/rover_teleop.launch.py']),
+        (os.path.join('share', package_name, 'models'), glob('models/*.xml')),
+        (os.path.join('share', package_name, 'models', 'scenes'), glob('models/scenes/*.xml')),
+        (os.path.join('share', package_name, 'models', 'terrains'), glob('models/terrains/*.png')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

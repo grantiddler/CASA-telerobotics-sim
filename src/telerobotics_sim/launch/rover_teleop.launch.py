@@ -26,32 +26,48 @@ Controller parameters (can be overridden on the command line via --ros-args -p)
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
-import numpy as np
-
-base_friction = [2.0, 0.050, 0.015]
-friction_step_size = 0.05
-friction_steps = 10
-duplicates = 1
-
-def get_friction(var, sweep):
-    friction = base_friction.copy()
-    friction[var] = base_friction[var] * (1 + friction_step_size * (sweep - friction_steps))
-    
-    return friction
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    LD = []
+    enable_viewer = LaunchConfiguration('enable_viewer')
+    start_x = LaunchConfiguration('start_x')
+    start_y = LaunchConfiguration('start_y')
+    start_z = LaunchConfiguration('start_z')
+    start_yaw = LaunchConfiguration('start_yaw')
 
-    for i in range(3):
-        
-        friction = base_friction.copy()
-        for j in range(2 * friction_steps + 1):
-            
-            friction = get_friction(i, j)
-            
-            for k in range(duplicates):
-                num = 1000 * i + j*10+k
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'enable_viewer',
+            default_value='false',
+            description='Launch MuJoCo viewer GUI'
+        ),
+        DeclareLaunchArgument('start_x', default_value='3.0'),
+        DeclareLaunchArgument('start_y', default_value='3.0'),
+        DeclareLaunchArgument('start_z', default_value='1.0'),
+        DeclareLaunchArgument('start_yaw', default_value='0.0'),
+
+        # ------------------------------------------------------------------
+        # MuJoCo simulation node
+        # Runs the physics engine, renders the viewer, and publishes:
+        #   /pose, /wheel_joint_states, /wheel_torque_cmds,
+        #   /wheel_*_pose topics
+        # ------------------------------------------------------------------
+        Node(
+            package='telerobotics_sim',
+            executable='mujoco',
+            name='mujoco_node',
+            output='screen',
+            emulate_tty=True,
+            parameters=[{
+                'enable_viewer': enable_viewer,
+                'start_x': start_x,
+                'start_y': start_y,
+                'start_z': start_z,
+                'start_yaw': start_yaw,
+            }],
+        ),
 
                 LD.append(Node(
                 package='telerobotics_sim',
@@ -73,4 +89,4 @@ def generate_launch_description():
     #             ))
 
     
-    return LaunchDescription(LD)
+    # return LaunchDescription(LD)
