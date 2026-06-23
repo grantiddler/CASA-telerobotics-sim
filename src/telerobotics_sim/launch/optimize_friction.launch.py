@@ -40,7 +40,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'enable_viewer',
-            default_value='false',
+            default_value='true',
             description='Launch MuJoCo viewer GUI'
         ),
         DeclareLaunchArgument('start_x', default_value='3.0'),
@@ -66,31 +66,6 @@ def generate_launch_description():
                 'start_y': start_y,
                 'start_z': start_z,
                 'start_yaw': start_yaw,
-            }],
-        ),
-
-        ## tcp connector for unity
-        Node(
-            package="ros_tcp_endpoint",
-            executable="default_server_endpoint",
-            output="screen"
-        ),
-
-        # ------------------------------------------------------------------
-        # Rover velocity controller (feedforward + P)
-        # Subscribes: /cmd_vel, /wheel_joint_states
-        # Publishes:  /control (torque), /wheel_vel_setpoints
-        # ------------------------------------------------------------------
-        Node(
-            package='telerobotics_sim',
-            executable='rover_velocity_controller',
-            name='rover_velocity_controller',
-            output='screen',
-            emulate_tty=True,
-            parameters=[{
-                'kp':         1.89,   # [N·m/(rad/s)] — tweak to tune transient response
-                'max_torque': 4.5,    # [N·m]         — must match MJCF ctrlrange/forcerange
-                'max_slew':   100.0,  # [N·m/s]       — reduce to soften torque steps
             }],
         ),
     ])
