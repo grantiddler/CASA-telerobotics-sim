@@ -178,7 +178,11 @@ class MJ_Node(Node):
 
         self.i += 1
     
+    def teleport_rover(self, x,y,z,yaw):
+        return
     
+    def change_friction(self, contact, rolling, torsional):
+        return
 
 
 def main():
