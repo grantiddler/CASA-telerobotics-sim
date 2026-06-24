@@ -46,7 +46,7 @@ class MJ_Node(Node):
         self.get_logger().info(('0' * (3 - int(np.log(self.number + .1 ) / np.log(10))) + str(self.number)))
         
         # wheel_torque_cmds: the torque [N·m] last written to each motor actuator
-        # self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
+        self.wheel_torque_cmd_pub  = self.create_publisher(JointState, 'wheel_torque_cmds',   10)
 
         # Last commanded wheel velocities [fl, bl, fr, br] in rad/s
         self._cmd_wheel_vels = [0.0, 0.0, 0.0, 0.0]
@@ -109,6 +109,9 @@ class MJ_Node(Node):
         self._cmd_wheel_vels = [left_torque, left_torque, right_torque, right_torque]
 
     def timer_callback(self):
+
+        # self.get_logger().info(self.m.geom("surface_terrain_geom")[0])
+        
         self.step_physics()
     
     def step_physics(self):
@@ -179,9 +182,21 @@ class MJ_Node(Node):
         self.i += 1
     
     def teleport_rover(self, x,y,z,yaw):
+        # teleport rover in mujoco
+        
+        yaw = math.radians(yaw)
+
+        adr = self.m.joint('chassis_free').qposadr[0]  # don't hardcode index 0
+        self.d.qpos[adr:adr+3] = [x, y, z]
+        self.d.qpos[adr+3:adr+7] = [math.cos(yaw/2), 0, 0, math.sin(yaw/2)]
+        mujoco.mj_forward(self.m, self.d)  # propagate before next mj_step
+        
         return
     
     def change_friction(self, contact, rolling, torsional):
+        # change friction in mujoco 
+        self.m.geom("surface_terrain_geom").friction = [contact, torsional, rolling]
+        
         return
 
 
@@ -191,6 +206,8 @@ def main():
     mj = MJ_Node()
 
     rclpy.spin(mj)
+    
+    mj.destroy_node()
 
     rclpy.shutdown()
 
