@@ -4,7 +4,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 
-class MinimalPublisher(Node):
+class Optimize(Node):
 
     def __init__(self):
         super().__init__('minimal_publisher')
@@ -19,19 +19,31 @@ class MinimalPublisher(Node):
         self.publisher_.publish(msg)
         self.get_logger().info('Publishing: "%s"' % msg.data)
         self.i += 1
+        
+    def reward_function(self):
+        # reset rover position
+        # restart control routine
+        # compare the rivers path to the correct path
+        # wait for control routine to finish somehow?
+        # this has to pause so the pose_callback can be run, I don't know exactly how to accomplish that in python yet.
+        return
+    
+    def pose_callback(self):
+        # subscribe to and record pose topic
+        return
 
 
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_publisher = MinimalPublisher()
+    optimize = Optimize()
 
-    rclpy.spin(minimal_publisher)
+    rclpy.spin(optimize)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_publisher.destroy_node()
+    optimize.destroy_node()
     rclpy.shutdown()
 
 

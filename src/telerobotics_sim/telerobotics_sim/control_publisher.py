@@ -28,15 +28,14 @@ class MinimalPublisher(Node):
         self.n = 0
 
     def timer_callback(self):
-        msg = Vector3()
-        msg.x = torques[self.n][0]
-        msg.y = torques[self.n][1]
-        self.publisher_.publish(msg)
-        self.i += 1
-        if(self.i >= times[self.n]):
-            self.i = 0
-            self.n += 1
-            self.get_logger().info(str(msg.x)  + " " + str(msg.y))
+        # read through a bag with motor efforts, publish those motor efforts
+        return
+            
+    def optimize_callback(self): # use a service for this, not a publisher?
+        # reset everything 
+        # start timer callback running
+        # wait for timer callback to finish somehow? maybe publisher and this is a different function?
+        return
 
 
 def main(args=None):
