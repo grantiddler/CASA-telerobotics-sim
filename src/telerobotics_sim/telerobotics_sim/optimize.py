@@ -3,6 +3,8 @@ from rclpy.node import Node
 
 from std_msgs.msg import String
 
+from bayes_opt import acquisition, BayesianOptimization
+
 
 class Optimize(Node):
 
@@ -12,7 +14,18 @@ class Optimize(Node):
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
+        
+        acq = acquisition.UpperConfidenceBound(kappa=2.5)
+        self.optimizer = BayesianOptimization(
+            f=None,
+            acquisition_function=acq,
+            pbounds={'x': (-2, 2), 'y': (-3, 3)},
+            verbose=2,
+            random_state=1,
+        )
 
+
+        
     def timer_callback(self):
         msg = String()
         msg.data = 'Hello World: %d' % self.i
@@ -20,17 +33,33 @@ class Optimize(Node):
         self.get_logger().info('Publishing: "%s"' % msg.data)
         self.i += 1
         
-    def reward_function(self):
-        # reset rover position
-        # restart control routine
-        # compare the rivers path to the correct path
-        # wait for control routine to finish somehow?
-        # this has to pause so the pose_callback can be run, I don't know exactly how to accomplish that in python yet.
+        
+    def start_bayesian_cycle(self):
+        self.next_friction = self.optimizer.suggest()
+        
+        # TODO: set friction in sim, start control
+        
         return
+        
+    def reward_function(self):
+        # I don't quite know how to impliment this yet
+        return 0
     
     def pose_callback(self):
         # subscribe to and record pose topic
+        # compute slip from wheel velocities, append to dict with timestamps?
+        
         return
+    
+    def control_end_callback(self):
+        self.optimizer.register(
+            params=self.next_friction,
+            target=self.reward_function(),
+        )
+
+        self.start_control_sequence
+        return
+        
 
 
 def main(args=None):
