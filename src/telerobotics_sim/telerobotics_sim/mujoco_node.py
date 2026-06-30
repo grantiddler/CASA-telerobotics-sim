@@ -14,6 +14,9 @@ from ament_index_python.packages import get_package_share_directory
 import os
 import math
 
+from rcl_interfaces.msg import SetParametersResult
+
+
 
 # 0.001 and rk4 integrator
 # add sensor to joint?? use sensor array instead of qvel
@@ -64,9 +67,20 @@ class MJ_Node(Node):
         self.declare_parameter('start_y', 3.0)
         self.declare_parameter('start_z', 1.0)
         self.declare_parameter('start_yaw', 0.0)  # degrees
+        self.declare_parameter('wheel_friction_sliding', 2.0)
+        self.declare_parameter('wheel_friction_torsional', 0.050)
+        self.declare_parameter('wheel_friction_rolling', 0.015)
 
         self.m = mujoco.MjModel.from_xml_path(model_path)
         self.d = mujoco.MjData(self.m)
+
+        self.wheel_geom_ids = [
+            self.m.geom(name).id for name in
+            ['wheel-f-left-geom', 'wheel-b-left-geom', 'wheel-f-right-geom', 'wheel-b-right-geom']
+        ]
+
+        self.update_wheel_friction()  # apply initial values
+        self.add_on_set_parameters_callback(self.on_param_change)
 
         # Apply initial pose to the chassis free joint
         x = self.get_parameter('start_x').value
@@ -96,6 +110,20 @@ class MJ_Node(Node):
         timer_period = self.m.opt.timestep
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
+
+    def update_wheel_friction(self):
+        sliding = self.get_parameter('wheel_friction_sliding').value
+        torsional = self.get_parameter('wheel_friction_torsional').value
+        rolling = self.get_parameter('wheel_friction_rolling').value
+        for gid in self.wheel_geom_ids:
+            self.m.geom_friction[gid] = [sliding, torsional, rolling]
+
+    def on_param_change(self, params):
+        for p in params:
+            if p.name.startswith('wheel_friction'):
+                self.update_wheel_friction()
+                self.get_logger().info(f'Updated {p.name} -> {p.value}')
+        return SetParametersResult(successful=True)
         
 
     def set_control_callback(self, msg):

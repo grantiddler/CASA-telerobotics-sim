@@ -20,14 +20,14 @@
         <body name="wheel-f-left" pos="-0.21779 0.0694 -0.16307" euler="0 90 0">
           <joint name="wheel-f-left-hinge" damping="1.89" type="hinge" axis="0 0 1"/>
           <!-- sliding friction | rotational friction | rolling friction -->
-          <geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+          <geom name="wheel-f-left-geom" type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
           <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
         </body>
 
         <!-- Back Left Wheel -->
         <body name="wheel-b-left" pos="-0.21779 -0.21384 -0.16307" euler="0 90 0">
           <joint name="wheel-b-left-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-          <geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+          <geom name="wheel-b-left-geom" type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
           <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
         </body>
       </body>
@@ -40,14 +40,14 @@
         <!-- Front Right Wheel -->
         <body name="wheel-f-right" pos="0.21779 0.0694 -0.16307" euler="0 90 0">
           <joint name="wheel-f-right-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-          <geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+          <geom name="wheel-f-right-geom" type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
           <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
         </body>
 
         <!-- Back Right Wheel -->
         <body name="wheel-b-right" pos="0.21779 -0.21384 -0.16307" euler="0 90 0">
           <joint name="wheel-b-right-hinge" type="hinge" damping="1.89" axis="0 0 1"/>
-          <geom type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
+          <geom name="wheel-b-right-geom" type="cylinder" size="0.05 0.05" rgba="0.1 0.1 0.1 1" density="100" condim="6" friction="2.0 0.050 0.015"/>
           <inertial pos="0 0 0" mass="0.24" diaginertia="0.001 0.001 0.001"/>
         </body>
       </body>
