@@ -1,0 +1,4 @@
+- plot slip/error (using plot juggler?) 
+- figure out the error with the "soft" collisions - this is a problem in the "update_friction()" method inside the mujoco node
+- add more dimensions to the bayesian optimization algo?
+- figure out the ros tcp connector

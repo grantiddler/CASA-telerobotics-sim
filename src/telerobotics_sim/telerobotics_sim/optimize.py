@@ -25,9 +25,9 @@ class Optimize(Node):
         super().__init__('minimal_publisher')
         self.ctrl_pub = self.create_publisher(Vector3, 'control', 10)
         
-        self.mj_node_name = "mujoco"
+        self.mj_node_name = "mujoco_node"
         
-        self.starting_pos = {'start_x': 3, 'start_y': 3, 'start_z': 1, 'start_yaw': 0}
+        self.starting_pos = {'start_x': 3, 'start_y': 3, 'start_z': 0.5, 'start_yaw': 0}
         
         
         timer_period = 0.5  # seconds
@@ -44,7 +44,7 @@ class Optimize(Node):
         self.optimizer = BayesianOptimization(
             f=None,
             acquisition_function=acq,
-            pbounds={'wheel_friction_sliding': (0, 10), 'wheel_friction_torsional': (0, 10), 'wheel_friction_rolling': (0, 10)},
+            pbounds={'wheel_friction_sliding': (0, 5), 'wheel_friction_torsional': (0, .5), 'wheel_friction_rolling': (0, .5)},
             verbose=2,
             random_state=1,
         )
@@ -81,11 +81,11 @@ class Optimize(Node):
         
         msg = Vector3()
         msg.x = float(4.5)
-        msg.y = float(0)
+        msg.y = float(2)
         self.ctrl_pub.publish(msg)     
         
         
-        if(self.itr == 10**2):
+        if(self.itr == 50):
             self.itr = 0
             self.timer.cancel()
             msg.x = float(0)
@@ -103,7 +103,6 @@ class Optimize(Node):
         
     def start_opt_cycle(self):
         self.friction = self.optimizer.suggest()
-        self.get_logger().info(f"starting new cycle - using friction values:\n{self.friction}")
         self.change_friction()
         self.reset_position()
         
@@ -120,7 +119,6 @@ class Optimize(Node):
     def reward_function(self): # returns negative mean squared error
         if self.error_num == 0:
             return None
-        self.get_logger().info(f"Mean error squared: {self.error_total / self.error_num}")
         return - (self.error_total / self.error_num) # maximize negative mean squared error -> minimize error
     
     
