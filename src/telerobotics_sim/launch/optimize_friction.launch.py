@@ -67,5 +67,14 @@ def generate_launch_description():
                 'start_z': start_z,
                 'start_yaw': start_yaw,
             }],
+            
+        ),
+        Node(
+            package='telerobotics_sim',
+            executable='optimize',
+            name='optimizer',
+            output='screen',
+            emulate_tty=True,
+            
         ),
     ])

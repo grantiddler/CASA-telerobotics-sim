@@ -76,9 +76,7 @@ class Optimize(Node):
         return self.future.result()
         
     def timer_callback(self):
-        self.itr += 1
-        self.get_logger().info(f'timer: {self.itr}')
-    
+        self.itr += 1    
         # publish control values in here?
         
         msg = Vector3()
@@ -104,10 +102,8 @@ class Optimize(Node):
         
         
     def start_opt_cycle(self):
-        self.get_logger().info(f'start cycle')
-        
         self.friction = self.optimizer.suggest()
-        self.get_logger().info(str(self.friction))
+        self.get_logger().info(f"starting new cycle - using friction values:\n{self.friction}")
         self.change_friction()
         self.reset_position()
         
