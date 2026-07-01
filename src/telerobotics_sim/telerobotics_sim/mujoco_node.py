@@ -39,13 +39,8 @@ class MJ_Node(Node):
         self.number = self.get_parameter('sim_ID').value
         
             
-        self.wheel_fl_pub = self.create_publisher(Pose, f'wheel_f_left_pose_{self.number}', 10)
-        self.wheel_bl_pub = self.create_publisher(Pose, f'wheel_b_left_pose_{self.number}', 10)
-        self.wheel_fr_pub = self.create_publisher(Pose, f'wheel_f_right_pose_{self.number}', 10)
-        self.wheel_br_pub = self.create_publisher(Pose, f'wheel_b_right_pose_{self.number}', 10)
-
         # Wheel velocity topics for PlotJuggler (actual vs commanded)
-        self.wheel_actual_vel_pub  = self.create_publisher(JointState, f'wheel_joint_states_' + ('0' * (3 - int(np.log(self.number + .1 ) / np.log(10))) + str(self.number)),  10)
+        self.wheel_actual_vel_pub  = self.create_publisher(JointState, 'wheel_joint_states',  10)
         self.get_logger().info(('0' * (3 - int(np.log(self.number + .1 ) / np.log(10))) + str(self.number)))
         
         # wheel_torque_cmds: the torque [N·m] last written to each motor actuator
@@ -67,6 +62,7 @@ class MJ_Node(Node):
         self.declare_parameter('start_y', 3.0)
         self.declare_parameter('start_z', 1.0)
         self.declare_parameter('start_yaw', 0.0)  # degrees
+        
         self.declare_parameter('wheel_friction_sliding', 2.0)
         self.declare_parameter('wheel_friction_torsional', 0.050)
         self.declare_parameter('wheel_friction_rolling', 0.015)
@@ -80,18 +76,10 @@ class MJ_Node(Node):
         ]
 
         self.update_wheel_friction()  # apply initial values
+        self.set_rover_position() # Apply initial pose to the chassis free joint
+        
         self.add_on_set_parameters_callback(self.on_param_change)
 
-        # Apply initial pose to the chassis free joint
-        x = self.get_parameter('start_x').value
-        y = self.get_parameter('start_y').value
-        z = self.get_parameter('start_z').value
-        yaw = math.radians(self.get_parameter('start_yaw').value)
-
-        adr = self.m.joint('chassis_free').qposadr[0]  # don't hardcode index 0
-        self.d.qpos[adr:adr+3] = [x, y, z]
-        self.d.qpos[adr+3:adr+7] = [math.cos(yaw/2), 0, 0, math.sin(yaw/2)]
-        mujoco.mj_forward(self.m, self.d)  # propagate before first mj_step
 
         self.declare_parameter('enable_viewer', False)
 
@@ -117,12 +105,25 @@ class MJ_Node(Node):
         rolling = self.get_parameter('wheel_friction_rolling').value
         for gid in self.wheel_geom_ids:
             self.m.geom_friction[gid] = [sliding, torsional, rolling]
+            
+    def set_rover_position(self):
+        x = self.get_parameter('start_x').value
+        y = self.get_parameter('start_y').value
+        z = self.get_parameter('start_z').value
+        yaw = math.radians(self.get_parameter('start_yaw').value)
+
+        adr = self.m.joint('chassis_free').qposadr[0]  # don't hardcode index 0
+        self.d.qpos[adr:adr+3] = [x, y, z]
+        self.d.qpos[adr+3:adr+7] = [math.cos(yaw/2), 0, 0, math.sin(yaw/2)]
+        mujoco.mj_forward(self.m, self.d)  # propagate before first mj_step
 
     def on_param_change(self, params):
         for p in params:
             if p.name.startswith('wheel_friction'):
                 self.update_wheel_friction()
-                self.get_logger().info(f'Updated {p.name} -> {p.value}')
+            if p.name.startswith('start_'):
+                self.set_rover_position()
+            self.get_logger().info(f'Updated {p.name} -> {p.value}')
         return SetParametersResult(successful=True)
         
 
@@ -137,9 +138,6 @@ class MJ_Node(Node):
         self._cmd_wheel_vels = [left_torque, left_torque, right_torque, right_torque]
 
     def timer_callback(self):
-
-        # self.get_logger().info(self.m.geom("surface_terrain_geom")[0])
-        
         self.step_physics()
     
     def step_physics(self):
@@ -160,21 +158,6 @@ class MJ_Node(Node):
             self.viewer.sync()
         self.publisher_.publish(msg)
         
-        # Publish wheel poses
-        wheel_names = ["wheel-f-left", "wheel-b-left", "wheel-f-right", "wheel-b-right"]
-        wheel_pubs = [self.wheel_fl_pub, self.wheel_bl_pub, self.wheel_fr_pub, self.wheel_br_pub]
-        
-        for name, pub in zip(wheel_names, wheel_pubs):
-            w_msg = Pose()
-            w_msg.position.x = self.d.body(name).xpos[0]
-            w_msg.position.y = self.d.body(name).xpos[1]
-            w_msg.position.z = self.d.body(name).xpos[2]
-            w_msg.orientation.w = self.d.body(name).xquat[0]
-            w_msg.orientation.x = self.d.body(name).xquat[1]
-            w_msg.orientation.y = self.d.body(name).xquat[2]
-            w_msg.orientation.z = self.d.body(name).xquat[3]
-            pub.publish(w_msg)
-
         # ---- Publish actual wheel angular velocities (from MuJoCo qvel) ----
         
         WHEEL_JOINTS = [
@@ -209,23 +192,7 @@ class MJ_Node(Node):
 
         self.i += 1
     
-    def teleport_rover(self, x,y,z,yaw):
-        # teleport rover in mujoco
-        
-        yaw = math.radians(yaw)
-
-        adr = self.m.joint('chassis_free').qposadr[0]  # don't hardcode index 0
-        self.d.qpos[adr:adr+3] = [x, y, z]
-        self.d.qpos[adr+3:adr+7] = [math.cos(yaw/2), 0, 0, math.sin(yaw/2)]
-        mujoco.mj_forward(self.m, self.d)  # propagate before next mj_step
-        
-        return
     
-    def change_friction(self, contact, rolling, torsional):
-        # change friction in mujoco 
-        self.m.geom("surface_terrain_geom").friction = [contact, torsional, rolling]
-        
-        return
 
 
 def main():
