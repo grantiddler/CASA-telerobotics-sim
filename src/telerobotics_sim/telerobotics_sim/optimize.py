@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.serialization import deserialize_message
 
 from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import Parameter, ParameterType
@@ -11,6 +12,8 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 
 from bayes_opt import acquisition, BayesianOptimization
+
+import rosbag2_py
 
 import time
 
@@ -30,7 +33,7 @@ class Optimize(Node):
         self.starting_pos = {'start_x': 3, 'start_y': 3, 'start_z': 0.5, 'start_yaw': 0}
         
         
-        timer_period = 0.5  # seconds
+        timer_period = 0.05  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.timer.cancel()
         self.itr = 0
@@ -40,6 +43,7 @@ class Optimize(Node):
                 
         self.subscription = self.create_subscription(JointState, 'wheel_joint_states', self.pose_callback, 10)
         
+        #bayesian optimization stuff
         acq = acquisition.UpperConfidenceBound(kappa=2.5)
         self.optimizer = BayesianOptimization(
             f=None,
@@ -48,6 +52,20 @@ class Optimize(Node):
             verbose=2,
             random_state=1,
         )
+        
+        #ros2 bag reader stuff
+        self.reader = rosbag2_py.SequentialReader()
+
+
+        self.last_ctrl = None
+        
+        self.pose_buffer = []
+        self.pose_times = []
+        self.ctrl_buffer = None
+        self.ctrl_time = None
+        
+        self.bag_time_offset = None
+        self.sim_time_offset = None
         
         self.start_opt_cycle()
 
@@ -76,27 +94,34 @@ class Optimize(Node):
         return self.future.result()
         
     def timer_callback(self):
-        self.itr += 1    
-        # publish control values in here?
+       
+        msg = self.ctrl_buffer
+        if msg:
+            self.ctrl_pub.publish(msg)
+            self.ctrl_buffer = None
+            return
         
-        msg = Vector3()
-        msg.x = float(4.5)
-        msg.y = float(2)
-        self.ctrl_pub.publish(msg)     
-        
-        
-        if(self.itr == 50):
-            self.itr = 0
-            self.timer.cancel()
-            msg.x = float(0)
-            msg.y = float(0)
-            self.ctrl_pub.publish(msg)     
-            
-            
-            self.control_end_callback()
-        
-            
+        while self.reader.has_next():
+            msg = self.reader.read_next()
+            if self.bag_time_offset == None:
+                self.bag_time_offset = msg[2]
+                self.sim_time_offset = self.get_clock().now()
+            if msg[0] == "/wheel_joint_states":
+                self.pose_buffer.append(deserialize_message(msg[1], JointState))
+                self.pose_times.append(msg[2])
+                continue
 
+        
+            elif msg[0] == "/control":
+                msg = deserialize_message(msg[1], Vector3)
+                
+                self.ctrl_pub.publish(msg)
+                return
+        
+            
+        self.timer.cancel()
+
+        self.control_end_callback()
             
         return
         
@@ -105,6 +130,13 @@ class Optimize(Node):
         self.friction = self.optimizer.suggest()
         self.change_friction()
         self.reset_position()
+        
+        storage_options = rosbag2_py.StorageOptions(
+            uri='data/test_run',
+            storage_id='sqlite3')
+        converter_options = rosbag2_py.ConverterOptions('', '')
+        
+        self.reader.open(storage_options, converter_options)
         
         time.sleep(5)
         
@@ -127,7 +159,46 @@ class Optimize(Node):
         # subscribe to and record pose topic
         # compute slip from wheel velocities, append to dict with timestamps?
         
+        vel = msg.velocity
+        pos = msg.position
         
+        r = R.from_quat(pos[-4:])
+        heading = r.as_euler('xyz')[0]
+        
+        tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5]))
+        transverse_vel = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
+        angular_vel = float(vel[-1])
+        
+        # real velocities at given time
+        msg = None
+        
+        for i in range(len(self.pose_times)): #TODO make this so it gets the closest thing, not the first one to happen next
+            if self.pose_times[i] - self.bag_time_offset > (self.get_clock().now() - self.sim_time_offset).nanoseconds: # TODO figure out if this is right or not
+                msg = self.pose_buffer[i]
+                self.pose_buffer = self.pose_buffer[i + 1 :]
+                self.pose_times = self.pose_times[i + 1 :]
+                
+        # if msg == None:
+            
+        #     self.pose_buffer = []
+        #     self.pose_times = []
+        #     while self.reader.has_next(): 
+        #         msg = self.reader.read_next()
+        #         if self.bag_time_offset == None:
+        #             self.bag_time_offset = msg[2]
+        #             self.sim_time_offset = self.get_clock().now()
+                    
+        #         if msg[0] == "/wheel_joint_states":
+        #             msg = deserialize_message(msg[1], JointState)
+        #             break
+
+            
+        #         elif msg[0] == "/control":
+        #             self.ctrl_buffer = deserialize_message(msg[1], Vector3)
+        #             self.ctrl_time = msg[2]
+        #             continue
+        # self.get_logger().info(f"{msg}")
+
         
         vel = msg.velocity
         pos = msg.position
@@ -135,15 +206,9 @@ class Optimize(Node):
         r = R.from_quat(pos[-4:])
         heading = r.as_euler('xyz')[0]
         
-        
-        tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5]))
-        transverse_vel = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
-        angular_vel = float(vel[-1])
-        
-        # compute "ideal" velocity from the slip thing I did before
-        real_tangential_vel = radius * (float(vel[0]) + float(vel[1]) + float(vel[2]) + float(vel[3])) / 4
-        real_transverse_vel = 0
-        real_angular_vel = radius * (float(vel[0]) + float(vel[1]) - float(vel[2]) - float(vel[3])) / (2 * width)
+        real_tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5]))
+        real_transverse_vel = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
+        real_angular_vel = float(vel[-1])
         
         # euclidian norm
         error = (tangential_vel - real_tangential_vel) ** 2 + (transverse_vel - real_transverse_vel) ** 2 + (angular_vel - real_angular_vel) ** 2
@@ -151,13 +216,16 @@ class Optimize(Node):
         self.error_num += 1
         self.error_total += error
         
-
-        
-        
-        
         return
     
     def control_end_callback(self):
+        self.pose_buffer = []
+        self.pose_times = []
+        self.ctrl_buffer = None
+        self.ctrl_time = None
+        
+        self.bag_time_offset = None
+        self.sim_time_offset = None
         self.optimizer.register(
             params=self.friction,
             target=self.reward_function(),

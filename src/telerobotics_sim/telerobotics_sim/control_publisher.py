@@ -6,36 +6,30 @@ from geometry_msgs.msg import Vector3
 
 
 torques = [[0.0, 0.0],
-           [4.5, 4.5],
-           [4.5, 3.375],
            [4.5, 2.25],
-           [4.5, 1.125],
-           [4.5, 0.0],
-           [4.5, -1.125],
-           [4.5, -2.25],
-           [4.5, -3.375],
-           [4.5, -4.5]]
-times = [1500, 30000,30000,30000,30000,30000,30000,30000,30000,30000]
+           [0.0, 0.0]]
+times = [10, 120, 10]
 
 class MinimalPublisher(Node):
 
     def __init__(self):
         super().__init__('minimal_publisher')
         self.publisher_ = self.create_publisher(Vector3, 'control', 10)
-        timer_period = 0.01  # seconds
+        timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
         self.n = 0
 
     def timer_callback(self):
-        # read through a bag with motor efforts, publish those motor efforts
-        return
-            
-    def optimize_callback(self): # use a service for this, not a publisher?
-        # reset everything 
-        # start timer callback running
-        # wait for timer callback to finish somehow? maybe publisher and this is a different function?
-        return
+        msg = Vector3()
+        msg.x = torques[self.n][0]
+        msg.y = torques[self.n][1]
+        self.publisher_.publish(msg)
+        self.i += 1
+        if(self.i >= times[self.n]):
+            self.i = 0
+            self.n += 1
+            self.get_logger().info(str(msg.x)  + " " + str(msg.y))
 
 
 def main(args=None):
