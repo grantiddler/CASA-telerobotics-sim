@@ -33,7 +33,7 @@ class Optimize(Node):
         self.starting_pos = {'start_x': 3, 'start_y': 3, 'start_z': 0.5, 'start_yaw': 0}
         
         
-        timer_period = 0.05  # seconds
+        timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.timer.cancel()
         self.itr = 0
@@ -120,7 +120,6 @@ class Optimize(Node):
         
             
         self.timer.cancel()
-
         self.control_end_callback()
             
         return
@@ -150,7 +149,7 @@ class Optimize(Node):
         
     def reward_function(self): # returns negative mean squared error
         if self.error_num == 0:
-            return None
+            return -1
         return - (self.error_total / self.error_num) # maximize negative mean squared error -> minimize error
     
     
@@ -158,6 +157,8 @@ class Optimize(Node):
     def pose_callback(self, msg):
         # subscribe to and record pose topic
         # compute slip from wheel velocities, append to dict with timestamps?
+        
+        #TODO: if the rover isn't moving don't calculate error
         
         vel = msg.velocity
         pos = msg.position
@@ -172,33 +173,42 @@ class Optimize(Node):
         # real velocities at given time
         msg = None
         
+        
+        msg_found = False
         for i in range(len(self.pose_times)): #TODO make this so it gets the closest thing, not the first one to happen next
             if self.pose_times[i] - self.bag_time_offset > (self.get_clock().now() - self.sim_time_offset).nanoseconds: # TODO figure out if this is right or not
                 msg = self.pose_buffer[i]
                 self.pose_buffer = self.pose_buffer[i + 1 :]
                 self.pose_times = self.pose_times[i + 1 :]
+                msg_found = True
+                break
+        
+        if not msg_found:
+            
+            self.pose_buffer = []
+            self.pose_times = []
+            while self.reader.has_next(): 
+                msg = self.reader.read_next()
+                if self.bag_time_offset == None:
+                    self.bag_time_offset = msg[2]
+                    self.sim_time_offset = self.get_clock().now()
                 
-        # if msg == None:
-            
-        #     self.pose_buffer = []
-        #     self.pose_times = []
-        #     while self.reader.has_next(): 
-        #         msg = self.reader.read_next()
-        #         if self.bag_time_offset == None:
-        #             self.bag_time_offset = msg[2]
-        #             self.sim_time_offset = self.get_clock().now()
+                
+                if msg[0] == "/wheel_joint_states":
+                    msg = deserialize_message(msg[1], JointState)
+                    msg_found = True
                     
-        #         if msg[0] == "/wheel_joint_states":
-        #             msg = deserialize_message(msg[1], JointState)
-        #             break
+                    break
 
             
-        #         elif msg[0] == "/control":
-        #             self.ctrl_buffer = deserialize_message(msg[1], Vector3)
-        #             self.ctrl_time = msg[2]
-        #             continue
-        # self.get_logger().info(f"{msg}")
-
+                elif msg[0] == "/control":
+                    self.ctrl_buffer = deserialize_message(msg[1], Vector3)
+                    self.ctrl_time = msg[2]
+                    continue
+        if not msg_found:
+            self.timer.cancel()
+            self.control_end_callback()
+            return
         
         vel = msg.velocity
         pos = msg.position
