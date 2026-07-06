@@ -2,7 +2,7 @@
   <include file="rover.xml"/>
 
   <asset>
-    <hfield name="pit" file="terrains/testpit_5cmpp_gray.png" size="20 20 2 0.1"/>
+    <hfield name="pit" file="terrains/testpit_5cmpp_gray_513.png" size="10 10 2 0.1"/>
   </asset>
 
   <worldbody>
