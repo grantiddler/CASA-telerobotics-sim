@@ -6,6 +6,7 @@ from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import Parameter, ParameterType
 
 from geometry_msgs.msg import Vector3
+from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
 
 from scipy.spatial.transform import Rotation as R
@@ -42,6 +43,9 @@ class Optimize(Node):
 
                 
         self.subscription = self.create_subscription(JointState, 'wheel_joint_states', self.pose_callback, 10)
+        
+        self.error_pub = self.create_publisher(Float64, 'error', 10)
+        
         
         #bayesian optimization stuff
         acq = acquisition.UpperConfidenceBound(kappa=2.5)
@@ -236,12 +240,18 @@ class Optimize(Node):
         
         self.bag_time_offset = None
         self.sim_time_offset = None
+        reward = self.reward_function()
         self.optimizer.register(
             params=self.friction,
-            target=self.reward_function(),
+            target=reward
         )
 
         self.start_opt_cycle()
+        
+        msg = Float64()
+        msg.data = -np.log10(-reward)
+        
+        self.error_pub.publish(msg)
         return
         
 
