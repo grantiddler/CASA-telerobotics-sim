@@ -1,9 +1,10 @@
 <mujoco model="rover scene">
-  <include file="rover.xml"/>
+    <include file="rover.xml"/>
 
-  <asset>
-    <hfield name="pit" file="terrains/testpit_5cmpp_gray_513.png" size="10 10 2 0.1"/>
-  </asset>
+    <asset>
+        <hfield name="pit" file="/home/xavie/CASA-telerobotics-sim/src/telerobotics_sim/models/terrains/lv1_test_site_1_200m_200m_5cmpp_flipped.hfield" 
+                size="50 50 20.29 0.05"/>
+    </asset>
 
   <worldbody>
     <!-- Ground plane -->

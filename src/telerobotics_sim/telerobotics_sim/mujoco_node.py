@@ -99,6 +99,9 @@ class MinimalService(Node):
         timer_period = self.m.opt.timestep
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
+        print(self.m.hfield_nrow)
+        print(self.m.hfield_ncol)
+        print(self.m.hfield_size)
 
     def update_wheel_friction(self):
         sliding = self.get_parameter('wheel_friction_sliding').value
