@@ -33,6 +33,7 @@ class Optimize(Node):
         
         self.starting_pos = {'start_x': 3, 'start_y': 3, 'start_z': 0.5, 'start_yaw': 0}
         
+        self.last_ctrl = None
         
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -45,6 +46,11 @@ class Optimize(Node):
         self.subscription = self.create_subscription(JointState, 'wheel_joint_states', self.pose_callback, 10)
         
         self.error_pub = self.create_publisher(Float64, 'error', 10)
+        self.error_avg_pub = self.create_publisher(Float64, 'error_avg', 10)
+        
+        self.sim_avg = self.create_publisher(Vector3, 'sim_avg', 10)
+        self.real_avg = self.create_publisher(Vector3, 'real_avg', 10)
+        
         
         
         #bayesian optimization stuff
@@ -52,7 +58,7 @@ class Optimize(Node):
         self.optimizer = BayesianOptimization(
             f=None,
             acquisition_function=acq,
-            pbounds={'wheel_friction_sliding': (0, 5), 'wheel_friction_torsional': (0, .5), 'wheel_friction_rolling': (0, .5)},
+            pbounds={'wheel_friction_sliding': (0, 3), 'wheel_friction_torsional': (0, .1), 'wheel_friction_rolling': (0, .05)},
             verbose=2,
             random_state=1,
         )
@@ -61,7 +67,7 @@ class Optimize(Node):
         self.reader = rosbag2_py.SequentialReader()
 
 
-        self.last_ctrl = None
+
         
         self.pose_buffer = []
         self.pose_times = []
@@ -94,6 +100,15 @@ class Optimize(Node):
             param.value.double_value = float(self.starting_pos[i])
             req.parameters.append(param)
 
+        self.control_times = []
+        self.control_vals = []
+        
+        self.vel_times = []
+        self.vels = []
+        
+        self.wheel_vel_times = []
+        self.wheel_vels = []
+        
         self.future = self.param_client.call_async(req)
         return self.future.result()
         
@@ -101,7 +116,12 @@ class Optimize(Node):
        
         msg = self.ctrl_buffer
         if msg:
+
             self.ctrl_pub.publish(msg)
+
+            self.last_ctrl = msg
+            
+            
             self.ctrl_buffer = None
             return
         
@@ -118,6 +138,8 @@ class Optimize(Node):
         
             elif msg[0] == "/control":
                 msg = deserialize_message(msg[1], Vector3)
+                self.last_ctrl = msg
+
                 
                 self.ctrl_pub.publish(msg)
                 return
@@ -135,7 +157,7 @@ class Optimize(Node):
         self.reset_position()
         
         storage_options = rosbag2_py.StorageOptions(
-            uri='data/test_run',
+            uri='data/multi_input4',
             storage_id='sqlite3')
         converter_options = rosbag2_py.ConverterOptions('', '')
         
@@ -147,6 +169,13 @@ class Optimize(Node):
         
         self.error_total = 0
         self.error_num = 0
+        
+        self.tangential_last = 0
+        self.transverse_last = 0
+        self.angular_last = 0
+        self.real_tangential_last = 0
+        self.real_transverse_last = 0
+        self.real_angular_last = 0
         
         
         return
@@ -167,12 +196,24 @@ class Optimize(Node):
         vel = msg.velocity
         pos = msg.position
         
+        smoothing_factor = 0.0005
+        
         r = R.from_quat(pos[-4:])
         heading = r.as_euler('xyz')[0]
         
-        tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5]))
-        transverse_vel = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
-        angular_vel = float(vel[-1])
+        tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.tangential_last
+        transverse_vel = (np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.transverse_last
+        angular_vel = float(vel[-1]) * smoothing_factor + (1 - smoothing_factor) * self.angular_last
+        
+        self.tangential_last = tangential_vel
+        self.transverse_last = transverse_vel
+        self.angular_last = angular_vel
+        
+        msg = Vector3()
+        msg.x = angular_vel
+        msg.y = tangential_vel
+        msg.z = transverse_vel
+        self.sim_avg.publish(msg)
         
         # real velocities at given time
         msg = None
@@ -206,8 +247,10 @@ class Optimize(Node):
 
             
                 elif msg[0] == "/control":
+                    
                     self.ctrl_buffer = deserialize_message(msg[1], Vector3)
                     self.ctrl_time = msg[2]
+                    
                     continue
         if not msg_found:
             self.timer.cancel()
@@ -220,15 +263,33 @@ class Optimize(Node):
         r = R.from_quat(pos[-4:])
         heading = r.as_euler('xyz')[0]
         
-        real_tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5]))
-        real_transverse_vel = np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])
-        real_angular_vel = float(vel[-1])
+        real_tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.real_tangential_last
+        real_transverse_vel = (np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.real_transverse_last
+        real_angular_vel = float(vel[-1]) * smoothing_factor + (1 - smoothing_factor) * self.real_angular_last
         
+        self.real_tangential_last = real_tangential_vel
+        self.real_transverse_last = real_transverse_vel
+        self.real_angular_last = real_angular_vel
+        
+        msg = Vector3()
+        msg.x = real_angular_vel
+        msg.y = real_tangential_vel
+        msg.z = real_transverse_vel
+        self.real_avg.publish(msg)
+        
+        # self.get_logger().info(f"{self.last_ctrl}")
+        if real_tangential_vel == 0 or real_transverse_vel == 0 or real_angular_vel == 0 or self.last_ctrl == None  or (self.last_ctrl.x == 0 and self.last_ctrl.y == 0):
+            return
         # euclidian norm
-        error = (tangential_vel - real_tangential_vel) ** 2 + (transverse_vel - real_transverse_vel) ** 2 + (angular_vel - real_angular_vel) ** 2
+        error = np.sqrt(((tangential_vel - real_tangential_vel)) ** 2 + ((transverse_vel - real_transverse_vel)) ** 2 + ((angular_vel - real_angular_vel)) ** 2)
         
         self.error_num += 1
         self.error_total += error
+        
+        msg = Float64()
+        msg.data = error
+        
+        self.error_pub.publish(msg)
         
         return
     
@@ -251,7 +312,7 @@ class Optimize(Node):
         msg = Float64()
         msg.data = -np.log10(-reward)
         
-        self.error_pub.publish(msg)
+        self.error_avg_pub.publish(msg)
         return
         
 

@@ -40,7 +40,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'enable_viewer',
-            default_value='false',
+            default_value='true',
             description='Launch MuJoCo viewer GUI'
         ),
         DeclareLaunchArgument('start_x', default_value='3.0'),

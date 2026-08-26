@@ -3,12 +3,8 @@ for this next week:
 - recruiting poster
 - add new parameters to mj
 - clean up pose topics
+- set up optimization to recognize noise
 
 eventually:
 - vr in unity again
 - terrain over ros
-- figure out unity terrain
-
-
-Terrains:
-- 

@@ -1,0 +1,14 @@
+for this next week:
+- moon terrain - xavier did this already
+- recruiting poster
+- add new parameters to mj
+- clean up pose topics
+- set up optimization to recognize noise
+
+eventually:
+- vr in unity again
+- terrain over ros
+
+why is the thing not working that well:
+- error is generally in the 10^-3 to 10^-6 range. Because of floating point errors ~5 * 10^-7 seems to be a limit for how low an error can be, even between 2 runs with identical parameters.
+- the system is able to easily guess that ~2 is the correct value of sliding friction, which  
