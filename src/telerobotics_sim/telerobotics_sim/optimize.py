@@ -130,8 +130,13 @@ class Optimize(Node):
         
     def timer_callback(self):
         
+        if self.ctrl_num == len(self.ctls):
+            self.get_logger().info(f"{(self.control_vals)}")
+            
+            self.timer.cancel()
+            self.control_end_callback()
        
-        if self.itr < self.ctl_iterations:
+        elif self.itr < self.ctl_iterations:
             self.itr += 1
             msg = Vector3()
             msg.x = self.ctls[self.ctrl_num][0]
@@ -141,9 +146,9 @@ class Optimize(Node):
         
         elif self.itr == self.ctl_iterations:
             self.error_num += 1
-            error = np.power((self.tan_av / self.av_n) - self.tan_target[self.ctrl_num], 2) + np.power((self.tran_av / self.av_n) - self.tran_target[self.ctrl_num], 2) + np.power((self.ang_av / self.av_n) - self.ang_target[self.ctrl_num], 2)
+            error = np.power((self.tan_av / (self.av_n + 0.001)) - self.tan_target[self.ctrl_num], 2) + np.power((self.tran_av / (self.av_n + 0.001)) - self.tran_target[self.ctrl_num], 2) + np.power((self.ang_av / (self.av_n + 0.001)) - self.ang_target[self.ctrl_num], 2)
+            self.get_logger().info(f"{(self.tan_av / (self.av_n + 0.001))} + {(self.tran_av / (self.av_n + 0.001))} + {(self.ang_av / (self.av_n + 0.001))}")
             self.error_total += error
-            self.get_logger().info(f"{(self.tan_av / self.av_n)} + {(self.tran_av / self.av_n)} + {(self.ang_av / self.av_n)}")
             
             self.itr = 0
             self.ctrl_num += 1
@@ -159,9 +164,6 @@ class Optimize(Node):
             
             self.error_pub.publish(msg)
             
-        elif self.ctrl_num == len(self.control_vals):
-            self.timer.cancel()
-            self.control_end_callback()
      
         
         
@@ -205,8 +207,9 @@ class Optimize(Node):
         return
         
     def reward_function(self): # returns negative mean squared error
+        
         if self.error_num == 0:
-            return -1
+            return -1.0
         return - (self.error_total / self.error_num) # maximize negative mean squared error -> minimize error
     
     
