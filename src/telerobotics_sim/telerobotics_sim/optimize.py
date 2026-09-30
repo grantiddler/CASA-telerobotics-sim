@@ -67,6 +67,7 @@ class Optimize(Node):
         self.reader = rosbag2_py.SequentialReader()
 
 
+        self.ctl_iterations = 1000
 
         
         self.pose_buffer = []
@@ -77,7 +78,22 @@ class Optimize(Node):
         self.bag_time_offset = None
         self.sim_time_offset = None
         
+        self.ctls = [[1.0,1.0], [0.75, 1.0], [0.25, 1.0], [0.5, 1.0], [0.75, 1.0]]
+        self.tan_target = [0.06662833536826238, 0.06494687030304573, 0.02827034501284375, 0.005250257609663304, 0.004006641722145742]
+        self.tran_target = [0.0010356243687817087, -0.00275681761491831, -0.003036964496852522, -0.0028726530164218935, -0.0015745129517468937]
+        self.ang_target = [-0.0022234652848633326,  -0.0040671347580258635, -0.009502468912110972, -0.01757577157573499, 0.015356837980413042]
+        
+        # "input_filename", "average", "neg_average", "average_tran", "neg_average_tran", "average_rot", "neg_average_rot", "cmd_neg_l", "cmd_neg_r", "cmd_pos_l", "cmd_pos_r"
+        # "test1.txt", 0.06662833536826238, -0.000729351557597434, 0.0010356243687817087, -3.7155207739479975e-05, -0.0022234652848633326, 0.01198887318094532, 0, 0, 1.0, 1.0
+        # "test2.txt", 0.06494687030304573, -0.0660283037780729, -0.00275681761491831, -0.001048086809973268, -0.0040671347580258635, -0.03606246850093788, -0.75, -1.0, 0.75, 1.0
+        # "test4.txt", 0.02827034501284375, -0.01971268069716876, -0.003036964496852522, 0.0021353250146064363, -0.009502468912110972, 0.009715795986086365, -0.25, -1.0, 0.25, 1.0
+        # "test7.txt", 0.005250257609663304, -0.008890301258607743, -0.0028726530164218935, 0.0029511287150970865, -0.01757577157573499, 0.016827316043262236, -0.5, -1.0, 0.5, 1.0
+        # "test8.txt", 0.004006641722145742, -0.0020498900895139136, -0.0015745129517468937, 0.0047734360132171, 0.015356837980413042, -0.058630637606532844, -0.75, -1.0, 0.75, 1.0
+        # # "test9.txt", 0.00098546081595037, 0.0016379128717829664, 0.0009813014442907639, 0.000756858128900289, -0.043626041489224214, 0.030148537277467156, -1.0, -1.0, 1.0, 1.0
+
+        
         self.start_opt_cycle()
+        
 
     def change_friction(self):
         req = SetParameters.Request()
@@ -177,6 +193,16 @@ class Optimize(Node):
         self.real_transverse_last = 0
         self.real_angular_last = 0
         
+        self.tan_av = 0
+        self.tran_av = 0
+        self.ang_av = 0
+        self.av_n = 0
+        self.err = 0
+        
+        self.ctrl_num = 0
+        
+        self.itr = 0
+        
         
         return
         
@@ -196,7 +222,7 @@ class Optimize(Node):
         vel = msg.velocity
         pos = msg.position
         
-        smoothing_factor = 0.0005
+        smoothing_factor = 1
         
         r = R.from_quat(pos[-4:])
         heading = r.as_euler('xyz')[0]
@@ -209,6 +235,15 @@ class Optimize(Node):
         self.transverse_last = transverse_vel
         self.angular_last = angular_vel
         
+        
+        
+        if(np.abs(tangential_vel) + np.abs(transverse_vel) + np.abs(angular_vel) > 0.001):
+            # self.get_logger().info(f"{np.abs(tangential_vel) + np.abs(transverse_vel) + np.abs(angular_vel) > 0.001}")
+            self.tan_av += tangential_vel
+            self.tran_av += transverse_vel
+            self.ang_av += angular_vel
+            self.av_n += 1
+        
         msg = Vector3()
         msg.x = angular_vel
         msg.y = tangential_vel
@@ -218,78 +253,68 @@ class Optimize(Node):
         # real velocities at given time
         msg = None
         
-        
-        msg_found = False
-        for i in range(len(self.pose_times)): #TODO make this so it gets the closest thing, not the first one to happen next
-            if self.pose_times[i] - self.bag_time_offset > (self.get_clock().now() - self.sim_time_offset).nanoseconds: # TODO figure out if this is right or not
-                msg = self.pose_buffer[i]
-                self.pose_buffer = self.pose_buffer[i + 1 :]
-                self.pose_times = self.pose_times[i + 1 :]
-                msg_found = True
-                break
-        
-        if not msg_found:
+        if self.ctrl_num == len(self.ctls):
+                self.timer.cancel()
+                self.control_end_callback()
+                return
+        elif self.itr < self.ctl_iterations:
+            self.itr += 1
+            msg = Vector3()
+            msg.x = self.ctls[self.ctrl_num][0]
+            msg.y = self.ctls[self.ctrl_num][1]
+            self.ctrl_pub.publish(msg)
             
-            self.pose_buffer = []
-            self.pose_times = []
-            while self.reader.has_next(): 
-                msg = self.reader.read_next()
-                if self.bag_time_offset == None:
-                    self.bag_time_offset = msg[2]
-                    self.sim_time_offset = self.get_clock().now()
-                
-                
-                if msg[0] == "/wheel_joint_states":
-                    msg = deserialize_message(msg[1], JointState)
-                    msg_found = True
+        else:
+    
+            # self.get_logger().info(f"{(self.tan_av / self.av_n) - self.tan_target[self.ctrl_num]} {(self.tran_av / self.av_n) - self.tran_target[self.ctrl_num]} {(self.ang_av / self.av_n) / self.ang_target[self.ctrl_num]}")
                     
-                    break
-
+            self.error_num += 1
+            error = np.power((self.tan_av / self.av_n) - self.tan_target[self.ctrl_num], 2) + np.power((self.tran_av / self.av_n) - self.tran_target[self.ctrl_num], 2) + np.power((self.ang_av / self.av_n) / self.ang_target[self.ctrl_num], 2)
+            self.error_total += error
             
-                elif msg[0] == "/control":
-                    
-                    self.ctrl_buffer = deserialize_message(msg[1], Vector3)
-                    self.ctrl_time = msg[2]
-                    
-                    continue
-        if not msg_found:
-            self.timer.cancel()
-            self.control_end_callback()
-            return
+            self.itr = 0
+            self.ctrl_num += 1
+            
+            self.tan_av = 0
+            self.tran_av = 0
+            self.ang_av = 0
+            self.av_n = 0
+            self.err = 0
+            
+            msg = Float64()
+            msg.data = error
+            
+            self.error_pub.publish(msg)
+            
+       
         
-        vel = msg.velocity
-        pos = msg.position
+        # vel = msg.velocity
+        # pos = msg.position
         
-        r = R.from_quat(pos[-4:])
-        heading = r.as_euler('xyz')[0]
+        # r = R.from_quat(pos[-4:])
+        # heading = r.as_euler('xyz')[0]
         
-        real_tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.real_tangential_last
-        real_transverse_vel = (np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.real_transverse_last
-        real_angular_vel = float(vel[-1]) * smoothing_factor + (1 - smoothing_factor) * self.real_angular_last
+        # real_tangential_vel = (np.sin(heading) * float(vel[4]) + np.cos(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.real_tangential_last
+        # real_transverse_vel = (np.cos(heading) * float(vel[4]) - np.sin(heading) * float(vel[5])) * smoothing_factor + (1 - smoothing_factor) * self.real_transverse_last
+        # real_angular_vel = float(vel[-1]) * smoothing_factor + (1 - smoothing_factor) * self.real_angular_last
         
-        self.real_tangential_last = real_tangential_vel
-        self.real_transverse_last = real_transverse_vel
-        self.real_angular_last = real_angular_vel
+        # self.real_tangential_last = real_tangential_vel
+        # self.real_transverse_last = real_transverse_vel
+        # self.real_angular_last = real_angular_vel
         
-        msg = Vector3()
-        msg.x = real_angular_vel
-        msg.y = real_tangential_vel
-        msg.z = real_transverse_vel
-        self.real_avg.publish(msg)
+        # msg = Vector3()
+        # msg.x = real_angular_vel
+        # msg.y = real_tangential_vel
+        # msg.z = real_transverse_vel
+        # self.real_avg.publish(msg)
         
         # self.get_logger().info(f"{self.last_ctrl}")
-        if real_tangential_vel == 0 or real_transverse_vel == 0 or real_angular_vel == 0 or self.last_ctrl == None  or (self.last_ctrl.x == 0 and self.last_ctrl.y == 0):
-            return
+        # if real_tangential_vel == 0 or real_transverse_vel == 0 or real_angular_vel == 0 or self.last_ctrl == None  or (self.last_ctrl.x == 0 and self.last_ctrl.y == 0):
+        #     return
         # euclidian norm
-        error = np.sqrt(((tangential_vel - real_tangential_vel)) ** 2 + ((transverse_vel - real_transverse_vel)) ** 2 + ((angular_vel - real_angular_vel)) ** 2)
+        # error = np.sqrt(((tangential_vel - real_tangential_vel)) ** 2 + ((transverse_vel - real_transverse_vel)) ** 2 + ((angular_vel - real_angular_vel)) ** 2)
         
-        self.error_num += 1
-        self.error_total += error
-        
-        msg = Float64()
-        msg.data = error
-        
-        self.error_pub.publish(msg)
+       
         
         return
     
@@ -298,6 +323,7 @@ class Optimize(Node):
         self.pose_times = []
         self.ctrl_buffer = None
         self.ctrl_time = None
+        
         
         self.bag_time_offset = None
         self.sim_time_offset = None
@@ -310,7 +336,7 @@ class Optimize(Node):
         self.start_opt_cycle()
         
         msg = Float64()
-        msg.data = -np.log10(-reward)
+        msg.data = (-reward)
         
         self.error_avg_pub.publish(msg)
         return
