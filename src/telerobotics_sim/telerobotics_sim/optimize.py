@@ -67,7 +67,7 @@ class Optimize(Node):
         self.reader = rosbag2_py.SequentialReader()
 
 
-        self.ctl_iterations = 1000
+        self.ctl_iterations = 100
 
         
         self.pose_buffer = []
@@ -78,7 +78,7 @@ class Optimize(Node):
         self.bag_time_offset = None
         self.sim_time_offset = None
         
-        self.ctls = [[1.0,1.0], [0.75, 1.0], [0.25, 1.0], [0.5, 1.0], [0.75, 1.0]]
+        self.ctls = [[4.5,4.5], [3.375, 4.5], [1.125, 4.5], [2.25, 4.5], [3.375, 4.5]]
         self.tan_target = [0.06662833536826238, 0.06494687030304573, 0.02827034501284375, 0.005250257609663304, 0.004006641722145742]
         self.tran_target = [0.0010356243687817087, -0.00275681761491831, -0.003036964496852522, -0.0028726530164218935, -0.0015745129517468937]
         self.ang_target = [-0.0022234652848633326,  -0.0040671347580258635, -0.009502468912110972, -0.01757577157573499, 0.015356837980413042]
@@ -129,42 +129,40 @@ class Optimize(Node):
         return self.future.result()
         
     def timer_callback(self):
+        
        
-        msg = self.ctrl_buffer
-        if msg:
-
+        if self.itr < self.ctl_iterations:
+            self.itr += 1
+            msg = Vector3()
+            msg.x = self.ctls[self.ctrl_num][0]
+            msg.y = self.ctls[self.ctrl_num][1]
             self.ctrl_pub.publish(msg)
 
-            self.last_ctrl = msg
-            
-            
-            self.ctrl_buffer = None
-            return
         
-        while self.reader.has_next():
-            msg = self.reader.read_next()
-            if self.bag_time_offset == None:
-                self.bag_time_offset = msg[2]
-                self.sim_time_offset = self.get_clock().now()
-            if msg[0] == "/wheel_joint_states":
-                self.pose_buffer.append(deserialize_message(msg[1], JointState))
-                self.pose_times.append(msg[2])
-                continue
-
-        
-            elif msg[0] == "/control":
-                msg = deserialize_message(msg[1], Vector3)
-                self.last_ctrl = msg
-
-                
-                self.ctrl_pub.publish(msg)
-                return
-        
+        elif self.itr == self.ctl_iterations:
+            self.error_num += 1
+            error = np.power((self.tan_av / self.av_n) - self.tan_target[self.ctrl_num], 2) + np.power((self.tran_av / self.av_n) - self.tran_target[self.ctrl_num], 2) + np.power((self.ang_av / self.av_n) - self.ang_target[self.ctrl_num], 2)
+            self.error_total += error
+            self.get_logger().info(f"{(self.tan_av / self.av_n)} + {(self.tran_av / self.av_n)} + {(self.ang_av / self.av_n)}")
             
-        self.timer.cancel()
-        self.control_end_callback()
+            self.itr = 0
+            self.ctrl_num += 1
             
-        return
+            self.tan_av = 0
+            self.tran_av = 0
+            self.ang_av = 0
+            self.av_n = 0
+            self.err = 0
+            
+            msg = Float64()
+            msg.data = error
+            
+            self.error_pub.publish(msg)
+            
+        elif self.ctrl_num == len(self.control_vals):
+            self.timer.cancel()
+            self.control_end_callback()
+     
         
         
     def start_opt_cycle(self):
@@ -172,12 +170,12 @@ class Optimize(Node):
         self.change_friction()
         self.reset_position()
         
-        storage_options = rosbag2_py.StorageOptions(
-            uri='data/multi_input4',
-            storage_id='sqlite3')
-        converter_options = rosbag2_py.ConverterOptions('', '')
+        # storage_options = rosbag2_py.StorageOptions(
+        #     uri='data/multi_input4',
+        #     storage_id='sqlite3')
+        # converter_options = rosbag2_py.ConverterOptions('', '')
         
-        self.reader.open(storage_options, converter_options)
+        # self.reader.open(storage_options, converter_options)
         
         time.sleep(5)
         
@@ -238,7 +236,8 @@ class Optimize(Node):
         
         
         if(np.abs(tangential_vel) + np.abs(transverse_vel) + np.abs(angular_vel) > 0.001):
-            # self.get_logger().info(f"{np.abs(tangential_vel) + np.abs(transverse_vel) + np.abs(angular_vel) > 0.001}")
+            self.get_logger().info(f"{tangential_vel} {transverse_vel} {angular_vel}")
+            self.get_logger().info(f"{self.tan_av / (self.av_n + 1)} {self.tran_av / (self.av_n + 1)} {angular_vel}")
             self.tan_av += tangential_vel
             self.tran_av += transverse_vel
             self.ang_av += angular_vel
@@ -252,39 +251,7 @@ class Optimize(Node):
         
         # real velocities at given time
         msg = None
-        
-        if self.ctrl_num == len(self.ctls):
-                self.timer.cancel()
-                self.control_end_callback()
-                return
-        elif self.itr < self.ctl_iterations:
-            self.itr += 1
-            msg = Vector3()
-            msg.x = self.ctls[self.ctrl_num][0]
-            msg.y = self.ctls[self.ctrl_num][1]
-            self.ctrl_pub.publish(msg)
-            
-        else:
-    
-            # self.get_logger().info(f"{(self.tan_av / self.av_n) - self.tan_target[self.ctrl_num]} {(self.tran_av / self.av_n) - self.tran_target[self.ctrl_num]} {(self.ang_av / self.av_n) / self.ang_target[self.ctrl_num]}")
-                    
-            self.error_num += 1
-            error = np.power((self.tan_av / self.av_n) - self.tan_target[self.ctrl_num], 2) + np.power((self.tran_av / self.av_n) - self.tran_target[self.ctrl_num], 2) + np.power((self.ang_av / self.av_n) / self.ang_target[self.ctrl_num], 2)
-            self.error_total += error
-            
-            self.itr = 0
-            self.ctrl_num += 1
-            
-            self.tan_av = 0
-            self.tran_av = 0
-            self.ang_av = 0
-            self.av_n = 0
-            self.err = 0
-            
-            msg = Float64()
-            msg.data = error
-            
-            self.error_pub.publish(msg)
+
             
        
         
