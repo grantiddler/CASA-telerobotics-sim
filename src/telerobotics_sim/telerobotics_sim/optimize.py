@@ -58,7 +58,7 @@ class Optimize(Node):
         self.optimizer = BayesianOptimization(
             f=None,
             acquisition_function=acq,
-            pbounds={'wheel_friction_sliding': (0, 3), 'wheel_friction_torsional': (0, .1), 'wheel_friction_rolling': (0, .05)},
+            pbounds={'wheel_friction_sliding': (0, 5), 'wheel_friction_torsional': (0, .5), 'wheel_friction_rolling': (0, .25)},
             verbose=2,
             random_state=1,
         )
@@ -131,7 +131,6 @@ class Optimize(Node):
     def timer_callback(self):
         
         if self.ctrl_num == len(self.ctls):
-            self.get_logger().info(f"{(self.control_vals)}")
             
             self.timer.cancel()
             self.control_end_callback()
@@ -147,7 +146,7 @@ class Optimize(Node):
         elif self.itr == self.ctl_iterations:
             self.error_num += 1
             error = np.power((self.tan_av / (self.av_n + 0.001)) - self.tan_target[self.ctrl_num], 2) + np.power((self.tran_av / (self.av_n + 0.001)) - self.tran_target[self.ctrl_num], 2) + np.power((self.ang_av / (self.av_n + 0.001)) - self.ang_target[self.ctrl_num], 2)
-            self.get_logger().info(f"{(self.tan_av / (self.av_n + 0.001))} + {(self.tran_av / (self.av_n + 0.001))} + {(self.ang_av / (self.av_n + 0.001))}")
+            # self.get_logger().info(f"{(self.tan_av / (self.av_n + 0.001))} + {(self.tran_av / (self.av_n + 0.001))} + {(self.ang_av / (self.av_n + 0.001))}")
             self.error_total += error
             
             self.itr = 0
@@ -239,8 +238,8 @@ class Optimize(Node):
         
         
         if(np.abs(tangential_vel) + np.abs(transverse_vel) + np.abs(angular_vel) > 0.001):
-            self.get_logger().info(f"{tangential_vel} {transverse_vel} {angular_vel}")
-            self.get_logger().info(f"{self.tan_av / (self.av_n + 1)} {self.tran_av / (self.av_n + 1)} {angular_vel}")
+            # self.get_logger().info(f"{tangential_vel} {transverse_vel} {angular_vel}")
+            # self.get_logger().info(f"{self.tan_av / (self.av_n + 1)} {self.tran_av / (self.av_n + 1)} {angular_vel}")
             self.tan_av += tangential_vel
             self.tran_av += transverse_vel
             self.ang_av += angular_vel
